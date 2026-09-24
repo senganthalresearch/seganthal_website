@@ -2,7 +2,7 @@ services:
   - type: web
     name: senganthal-research-terminal
     runtime: node
-    plan: starter
+    plan: free
     region: singapore
     branch: main
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build
