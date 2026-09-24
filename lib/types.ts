@@ -1,0 +1,9 @@
+export type Member = { email: string; name?: string; role: "admin" | "full" | "standard" | "viewer" | "member"; active: boolean; permissions?: Partial<Record<"analyze" | "watchlist" | "chat" | "reports" | "swing" | "export" | "aboutEdit", boolean>>; joinedAt?: string };
+export type Quote = { symbol: string; name: string; price: number | null; change: number | null; changePercent: number | null; currency: string; asOf: string | null };
+export type Candle = { date: string; close: number; volume: number; high?: number; low?: number };
+export type Metric = { key: string; label: string; value: number | null; unit: string; source: string; period?: string; good?: boolean };
+export type Stock = Quote & { sector: string; industry: string; description: string; metrics: Metric[]; score: number | null; coverage: number; history: Candle[]; fetchedAt: string; warnings: string[] };
+export type WatchItem = { symbol: string; name: string; group: string; addedAt?: string };
+export type NewsItem = { title: string; url: string; source: string; publishedAt: string | null };
+export type Message = { id: string; name: string; text: string; createdAt: string };
+export type ReportValues = { symbol: string; period: string; revenue: number | null; netProfit: number | null; operatingCashFlow: number | null; totalDebt: number | null; equity: number | null; notes: string };

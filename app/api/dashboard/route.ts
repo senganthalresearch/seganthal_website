@@ -1,0 +1,4 @@
+﻿import {api,requireMember,limited,HttpError} from '@/lib/http';
+import {snapshot,flows,deals,endOfDay,migrations,rotation,indexConstituents,rankings} from '@/lib/dashboard-data';
+export const maxDuration=60;
+export const GET=api(async request=>{const member=await requireMember();await limited(member,'dashboard',100);const p=new URL(request.url).searchParams;switch(p.get('section')){case 'snapshot':return snapshot();case 'flows':return flows();case 'nifty':return {...rankings(await indexConstituents('NIFTY 50')),source:'NSE Nifty 50 constituents'};case 'total':return {...rankings(await indexConstituents()),source:'NSE Nifty Total Market constituents'};case 'eod':return endOfDay();case 'deals':return deals();case 'migrations':return migrations(Math.min(2920,Math.max(30,Number(p.get('days'))||180)),p.get('all')==='true');case 'rotation':return rotation();default:throw new HttpError(400,'Choose a valid dashboard section.')}});

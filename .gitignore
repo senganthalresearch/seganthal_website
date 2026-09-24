@@ -1,0 +1,16 @@
+node_modules/
+.pnpm-store/
+.next/
+.env*
+!.env.example
+.vercel/
+*.tsbuildinfo
+*.log
+test-results/
+.test-build/
+.reference-review/
+.vercel
+.data/
+output/
+outputs/
+tmp/
