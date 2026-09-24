@@ -5,7 +5,7 @@ services:
     plan: free
     region: singapore
     branch: main
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
     startCommand: pnpm exec next start -H 0.0.0.0 -p $PORT
     healthCheckPath: /api/health
     autoDeploy: true
