@@ -11,6 +11,6 @@ export type BannerContent = z.infer<typeof bannerSchema>;
 export type SiteSettings = {about:AboutContent;banner:BannerContent;updatedAt?:string};
 export const defaultSettings:SiteSettings = {
  about:{founderName:'Jayamohan Sundararaj',founderTitle:'Founder & Chief Mentor',photo:'/founder-reference.jpg',tagline:'எல்லோருக்கும் எல்லாமும் ♦ ♦ ♦',story:'',journey:'2025 | 2030 is our Target',members:'1000 +',founded:'2025',programs:'7',offers:'Fundamental Analysis Classes\nSwing Trading Classes\nUS Market Classes\nPortfolio Arrangement\nMedical Insurance Advisory\nTerm Insurance Advisory\nRetirement Planning Advisory\nDirect Classes in Future',quotes:'📈 பங்குச்சந்தை பணக்காரர்களுக்கான இடம் அல்ல… புத்திசாலிகளுக்கான இடம்! 🧠 🤝 வாருங்கள்… சேர்ந்து கற்போம், முதலீடு செய்வோம், சேர்ந்து வளர்வோம்! ♦ ♦ ♦',closing:'Join our family and grow with us.'},
- banner:{enabled:true,text:'செங்காந்தள் முதலீட்டுக் குடும்பம் • சேர்ந்து கற்போம், முதலீடு செய்வோம், சேர்ந்து வளர்வோம்! ♦ ♦ ♦',colorStart:'#0f766e',colorEnd:'#4338ca',textColor:'#ffffff',speed:35,scroll:true,startsAt:'',endsAt:''}
+ banner:{enabled:true,text:'சேர்ந்து கற்போம், முதலீடு செய்வோம், சேர்ந்து வளர்வோம்!',colorStart:'#0f766e',colorEnd:'#4338ca',textColor:'#ffffff',speed:35,scroll:false,startsAt:'',endsAt:''}
 };
 export function bannerVisible(banner:BannerContent,now=Date.now()){return banner.enabled&&Boolean(banner.text)&&(!banner.startsAt||Date.parse(banner.startsAt)<=now)&&(!banner.endsAt||Date.parse(banner.endsAt)>now);}

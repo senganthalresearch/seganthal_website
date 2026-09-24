@@ -94,6 +94,52 @@ async function annualFundamentals(symbol: string) {
   }, 3600000);
 }
 
+async function quarterlyFundamentals(symbol: string) {
+  return cached("quarterlyFundamentals:" + symbol, async () => {
+    const period1 = new Date();
+    period1.setFullYear(period1.getFullYear() - 3);
+    try {
+      const rows = await yahoo.fundamentalsTimeSeries(ticker(symbol), { period1, type: "quarterly", module: "all" }, { validateResult: false });
+      return (Array.isArray(rows) ? rows : []).filter((row): row is FundamentalRow => Boolean(row) && typeof row === "object").sort((a, b) => dateMs(b.date) - dateMs(a.date));
+    } catch {
+      return [];
+    }
+  }, 3600000);
+}
+
+function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false) {
+  const seenDates = new Set<string>();
+  const parsed = [];
+  for (const r of rows) {
+    const d = r.date instanceof Date ? r.date : new Date(String(r.date || ""));
+    if (!Number.isFinite(d.getTime())) continue;
+    const dateKey = d.toISOString().slice(0, 10);
+    if (seenDates.has(dateKey)) continue;
+
+    const rev = rowNumber(r, "totalRevenue");
+    const op = firstNumber(rowNumber(r, "operatingIncome"), rowNumber(r, "ebit"));
+    const pat = firstNumber(rowNumber(r, "netIncomeCommonStockholders"), rowNumber(r, "netIncome"));
+    const eps = firstNumber(rowNumber(r, "dilutedEPS"), rowNumber(r, "basicEPS"));
+
+    if (rev !== null || pat !== null || op !== null) {
+      seenDates.add(dateKey);
+      const periodLabel = isQuarterly
+        ? `${d.toLocaleString("en-IN", { month: "short" })} ${d.getFullYear()}`
+        : `FY ${d.getFullYear()}`;
+      parsed.push({
+        period: periodLabel,
+        revenue: rev !== null ? Math.round(rev / 10000000) : null,
+        operatingProfit: op !== null ? Math.round(op / 10000000) : null,
+        opm: rev && op ? Math.round(op / rev * 1000) / 10 : null,
+        netProfit: pat !== null ? Math.round(pat / 10000000) : null,
+        npm: rev && pat ? Math.round(pat / rev * 1000) / 10 : null,
+        eps: eps !== null ? Math.round(eps * 100) / 100 : null
+      });
+    }
+  }
+  return parsed.slice(0, isQuarterly ? 8 : 5);
+}
+
 export async function quotes(symbols: string[]): Promise<Quote[]> {
   return cached("quotes:" + symbols.join(","), async () => {
     const requested = symbols.map(ticker);
@@ -128,11 +174,12 @@ export async function history(symbol: string): Promise<Candle[]> {
 
 export async function analyze(symbol: string): Promise<Stock> {
   return cached("stock:" + symbol, async () => {
-    const [quoteResult, summaryResult, historyResult, annualResult, holdingResult] = await Promise.allSettled([
+    const [quoteResult, summaryResult, historyResult, annualResult, quarterlyResult, holdingResult] = await Promise.allSettled([
       quotes([symbol]),
       yahoo.quoteSummary(ticker(symbol), { modules: ["assetProfile", "financialData", "defaultKeyStatistics", "summaryDetail"] }),
       history(symbol),
       annualFundamentals(symbol),
+      quarterlyFundamentals(symbol),
       nseHoldingSummary(symbol)
     ]);
 
@@ -190,9 +237,9 @@ export async function analyze(symbol: string): Promise<Stock> {
     addFallback("opm", "Operating margin", percentFraction(f?.operatingMargins), ratio(annualOperatingIncome, annualRevenue, 100), "%", v => v >= 15);
     addFallback("npm", "Net profit margin", percentFraction(f?.profitMargins), ratio(annualNetIncome, annualRevenue, 100), "%", v => v >= 10);
     add("revenueGrowth", "Revenue CAGR", annualRevenueCagr, "%", v => v >= 15, annualSource, annualPeriod);
-    add("patGrowth", "PAT CAGR", annualPatCagr, "%", undefined, annualSource, annualPeriod);
-    add("epsGrowth", "EPS CAGR", annualEpsCagr, "%", undefined, annualSource, annualPeriod);
-    addFallback("earningsGrowth", "Earnings growth (YoY)", percentFraction(f?.earningsGrowth), annualEarningsGrowth, "%");
+    add("patGrowth", "PAT CAGR", annualPatCagr, "%", v => v >= 15, annualSource, annualPeriod);
+    add("epsGrowth", "EPS CAGR", annualEpsCagr, "%", v => v >= 10, annualSource, annualPeriod);
+    addFallback("earningsGrowth", "Earnings growth (YoY)", percentFraction(f?.earningsGrowth), annualEarningsGrowth, "%", v => v > 0);
     addFallback("fcf", "Free cash flow", finite(f?.freeCashflow), annualFreeCashFlow, INR, v => v > 0);
     add("ocfPat", "OCF / PAT", ratio(annualOperatingCashFlow, annualNetIncome), MULTIPLE, v => v > 0.5, annualSource, annualPeriod);
     const marketCap = finite(d?.marketCap);
@@ -203,7 +250,7 @@ export async function analyze(symbol: string): Promise<Stock> {
     const growthForIntrinsic = Math.max(5, ...[percentFraction(f?.earningsGrowth), annualRevenueGrowth].filter((value): value is number => value !== null));
     const intrinsic = eps !== null && eps > 0 ? eps * (8.5 + 2 * growthForIntrinsic) * 6 / 8 : null;
     add("intrinsicValue", "Intrinsic value", intrinsic, INR);
-    add("marginSafety", "Margin of safety", intrinsic !== null && intrinsic > 0 && q.price !== null ? (intrinsic - q.price) / intrinsic * 100 : null, "%");
+    add("marginSafety", "Margin of safety", intrinsic !== null && intrinsic > 0 && q.price !== null ? (intrinsic - q.price) / intrinsic * 100 : null, "%", v => v > 0);
     add("graham", "Graham number", eps !== null && book !== null && eps > 0 && book > 0 ? Math.sqrt(22.5 * eps * book) : null, INR);
     add("eps", "Earnings per share", eps, INR);
     add("bookValue", "Book value per share", book, INR);
@@ -215,7 +262,7 @@ export async function analyze(symbol: string): Promise<Stock> {
     addFallback("operatingCashFlow", "Operating cash flow", finite(f?.operatingCashflow), annualOperatingCashFlow, INR);
     add("fcfYield", "Free cash flow yield", ratio(firstNumber(finite(f?.freeCashflow), annualFreeCashFlow), marketCap, 100), "%");
     add("promoterHolding", "Promoter holding", firstNumber(holding?.promoterHolding ?? null, percentFraction(k?.heldPercentInsiders)), "%", v => v > 35, holding?.promoterHolding !== null && holding?.promoterHolding !== undefined ? "NSE shareholding filing" : quoteSource, holding?.period);
-    add("promoterPledge", "Promoter pledged shares", holding?.promoterPledge ?? null, "%", undefined, "NSE shareholding filing", holding?.period);
+    add("promoterPledge", "Promoter pledged shares", holding?.promoterPledge ?? null, "%", v => v <= 5, "NSE shareholding filing", holding?.period);
 
     const { score, coverage } = qualityScore(metrics);
     return {
@@ -227,6 +274,10 @@ export async function analyze(symbol: string): Promise<Stock> {
       score,
       coverage,
       history: historyResult.status === "fulfilled" ? historyResult.value : [],
+      financials: {
+        annual: parseFinancialRows(annual, false),
+        quarterly: parseFinancialRows(quarterlyResult.status === "fulfilled" ? quarterlyResult.value : [], true)
+      },
       fetchedAt: new Date().toISOString(),
       warnings: [
         ...(summaryResult.status === "rejected" ? ["Fundamental data is unavailable. No score is calculated from missing values."] : []),
@@ -234,7 +285,7 @@ export async function analyze(symbol: string): Promise<Stock> {
         ...(holdingResult.status === "rejected" ? ["Exchange shareholding could not be loaded; promoter holding may fall back to provider data."] : []),
         ...(historyResult.status === "rejected" ? ["Price history is unavailable."] : []),
         "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
-        "The PDF-weighted score is a transparent checklist, not a buy, hold or sell recommendation."
+        "The fundamental score is a transparent checklist, not a buy, hold or sell recommendation."
       ]
     };
   }, 300000);

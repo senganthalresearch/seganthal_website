@@ -128,7 +128,11 @@ export async function migrations(days = 180, all = false) {
       const subject = String(r.sub || ""), stamp = String(r.cirDate || "");
       const time = Date.parse(`${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T00:00:00Z`);
       return /migrat/i.test(subject) && /main\s*board|SME|emerge/i.test(subject) && !/procedure|guideline|criteria|framework/i.test(subject) && time >= from.getTime();
-    }).map(r => ({ date: String(r.cirDisplayDate), subject: String(r.sub), reference: String(r.circDisplayNo), url: String(r.circFilelink).startsWith("https://nsearchives.nseindia.com/") ? String(r.circFilelink) : "" })),
+    }).map(r => {
+      const rawLink = String(r.circFilelink || "").trim();
+      const url = rawLink.startsWith("http") ? rawLink : (rawLink ? `https://nsearchives.nseindia.com/${rawLink.replace(/^\/+/, "")}` : "");
+      return { date: String(r.cirDisplayDate), subject: String(r.sub), reference: String(r.circDisplayNo || "NSE Circular"), url };
+    }),
     source: "NSE migration-related listing circulars",
     fetchedAt: new Date().toISOString()
   };
@@ -169,13 +173,13 @@ function averageReturns(rows: ReturnType<typeof quarterReturns>[]) {
 }
 
 async function basketReturns(name: (typeof sectors)[number][0]) {
-  const settled = await Promise.allSettled(sectorBaskets[name].map(async symbol => quarterReturns(await history(symbol))));
+  const settled = await Promise.allSettled(sectorBaskets[name].map(async symbol => quarterReturns(await history(symbol), new Date(), true)));
   const rows = settled.flatMap(result => result.status === "fulfilled" && result.value.some(r => r.value !== null) ? [result.value] : []);
   return rows.length ? averageReturns(rows) : null;
 }
 
 export async function rotation() {
-  return cached("sector:rotation:v2", async () => {
+  return cached("sector:rotation:v3", async () => {
     const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
     const start = new Date();
     start.setFullYear(start.getFullYear() - 3);
@@ -185,7 +189,7 @@ export async function rotation() {
         for (const symbol of symbols) {
           try {
             const data = await yahoo.chart(symbol, { period1: start, interval: "1mo" });
-            const returns = quarterReturns(data.quotes.filter(q => q.close !== null).map(q => ({ date: q.date.toISOString(), close: q.close! })));
+            const returns = quarterReturns(data.quotes.filter(q => q.close !== null).map(q => ({ date: q.date.toISOString(), close: q.close! })), new Date(), true);
             if (returns.some(r => r.value !== null)) return { name, returns, error: symbols[0] === symbol ? "" : "Proxy history: " + symbol };
           } catch {}
         }

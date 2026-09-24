@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, BookOpen, Pause, Play, ShieldCheck, Star, TrendingUp, Users, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, ShieldCheck, Star, TrendingUp, Users, X } from "lucide-react";
 import styles from "./about.module.css";
 import { bannerVisible, type AboutContent, type BannerContent } from "@/lib/site-settings";
 
@@ -24,7 +24,6 @@ function journeyItems(value: string) {
 }
 
 export function Banner({ value }: { value: BannerContent }) {
-  const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -37,15 +36,10 @@ export function Banner({ value }: { value: BannerContent }) {
   return (
     <div className="community-banner" style={{ background: `linear-gradient(110deg,${value.colorStart},${value.colorEnd})`, color: value.textColor }}>
       <div className="banner-window">
-        <div className={value.scroll ? "banner-text moving" : "banner-text"} style={{ animationDuration: `${value.speed}s`, animationPlayState: paused ? "paused" : "running" }}>
+        <div className="banner-text">
           {value.text}
         </div>
       </div>
-      {value.scroll && (
-        <button className="banner-pause" aria-label={paused ? "Play announcement" : "Pause announcement"} onClick={() => setPaused(!paused)}>
-          {paused ? <Play size={16} /> : <Pause size={16} />}
-        </button>
-      )}
     </div>
   );
 }
@@ -79,7 +73,7 @@ export function AboutUs({ content, mode = "section" }: { content: AboutContent; 
 
         <div className={styles.founderPanel}>
           <div className={styles.logoRow}>
-            <img src="/senganthal-logo.jpg" alt="Senganthal logo" />
+            <img src="/senganthal-logo-transparent.png" alt="Senganthal logo" />
             <span>Research, learning, and community</span>
           </div>
           <div className={styles.founderPhotoWrap}>
