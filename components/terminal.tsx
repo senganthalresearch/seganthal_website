@@ -260,7 +260,7 @@ export default function Terminal({ member, preview = false }: { member: Member; 
         <a href={preview ? "/preview" : "/"} className="brand-card">
           <img className="brand-logo" src="/senganthal-logo-transparent.png" alt="Senganthal logo" />
           <div className="brand-title-wrap">
-            <strong lang="ta">செங்காந்தள் முதலீட்டுக் குடும்பம்</strong>
+            <strong lang="ta">செங்காந்தள்™ முதலீட்டுக் குடும்பம்</strong>
             <div className="brand-sub-row">
               <small>பங்குச்சந்தை அடிப்படை பகுப்பாய்வு</small>
               <span className="brand-meta-dot">•</span>
