@@ -103,7 +103,7 @@ export default function Login({
             <div className="anniversary-hero-headline-wrap">
               <div className="anniversary-kicker-badge">
                 <span className="anniversary-kicker-dot" />
-                <span lang="ta">MILESTONE YEAR - முதலீடு முதலில் இடு</span>
+                <span lang="ta">MILESTONE YEAR - முதலீடு முதல் இடு</span>
               </div>
               <h1 className="anniversary-headline-text">
                 A year of learning.
