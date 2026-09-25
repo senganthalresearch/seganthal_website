@@ -68,8 +68,8 @@ export default function Terminal({ member, preview = false }: { member: Member; 
   const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("senganthal-theme");
-    const next = saved === "light" ? "light" : "dark";
+    const next = "dark";
+    window.localStorage.setItem("senganthal-theme", next);
     setTheme(next);
     document.documentElement.dataset.theme = next;
     setClock(new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST");

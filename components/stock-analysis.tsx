@@ -96,10 +96,23 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   return <section className="analyser-section"><div className="analyser-section-title"><h2>{title}</h2>{note && <span>{note}</span>}</div>{children}</section>;
 }
 
-function MetricCard({ metric }: { metric: Metric }) {
+function MetricCard({ metric, scoreContext = false }: { metric: Metric; scoreContext?: boolean }) {
   const points = scorePoints(metric);
-  const state = metric.value === null ? "missing" : points !== null ? points > 0 ? "pass" : "review" : metric.good === true ? "pass" : metric.good === false ? "review" : "context";
-  return <div className={`analyser-metric ${state}`}><span>{metric.label}</span><strong>{metricValue(metric)}</strong>{formulas[metric.key] && <em>{formulas[metric.key]}</em>}<small>{metric.value === null ? "Provider did not supply this value" : points !== null ? `${points} pts in Fundamental score` : metric.good === true ? "Meets checklist" : metric.good === false ? "Needs review" : metric.period ? new Date(metric.period).toLocaleDateString("en-IN") : "For context"}</small></div>;
+  const state = metric.value === null ? "missing" : scoreContext && points !== null ? points > 0 ? "pass" : "review" : metric.good === true ? "pass" : metric.good === false ? "review" : "context";
+  const note = metric.value === null
+    ? "Provider did not supply this value"
+    : scoreContext && points !== null
+      ? `${points} pts in Fundamental score`
+      : points !== null
+        ? "Score factor shown only in the 13-factor score above"
+        : metric.good === true
+          ? "Meets checklist"
+          : metric.good === false
+            ? "Needs review"
+            : metric.period
+              ? new Date(metric.period).toLocaleDateString("en-IN")
+              : "For context";
+  return <div className={`analyser-metric ${state}`}><span>{metric.label}</span><strong>{metricValue(metric)}</strong>{formulas[metric.key] && <em>{formulas[metric.key]}</em>}<small>{note}</small></div>;
 }
 
 function ScorecardMatrix({ metrics }: { metrics: Metric[] }) {
@@ -289,24 +302,24 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
     </div>
 
     <Section title="Fundamental score factors" note="All 13 calculations from the guide">
-      <div className="analyser-metrics">{metrics(["revenueGrowth", "patGrowth", "epsGrowth", "roe", "roce", "opm", "npm", "de", "interestCoverage", "currentRatio", "fcf", "ocfPat", "promoterHolding"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
+      <div className="analyser-metrics">{metrics(["revenueGrowth", "patGrowth", "epsGrowth", "roe", "roce", "opm", "npm", "de", "interestCoverage", "currentRatio", "fcf", "ocfPat", "promoterHolding"]).map(m => <MetricCard key={m.key} metric={m} scoreContext />)}</div>
     </Section>
 
-    <Section title="Key metrics" note={preview ? "Illustrative sample" : "Source: Yahoo Finance + exchange filings"}>
+    <Section title="Key metrics" note={preview ? "Illustrative sample - not added again to score" : "Source: Yahoo Finance + exchange filings - context only"}>
       <div className="analyser-metrics">{metrics(["pe", "pb", "eps", "bookValue", "yield", "roe", "roce", "de", "interestCoverage", "opm", "npm"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 
-    <Section title="Business metrics" note="Score growth figures use CAGR from annual fundamentals">
+    <Section title="Business metrics" note="Business context; duplicated score factors are not added again">
       <div className="analyser-metrics">{metrics(["marketCap", "revenue", "netIncome", "revenueGrowth", "patGrowth", "epsGrowth", "earningsGrowth", "fcf", "ocfPat", "fcfYield"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 
-    <Section title="Shareholding pattern" note={holdings ? "NSE filings - " + holdings.current.period : "Quarterly exchange filings"}>
+    <Section title="Shareholding pattern" note={holdings ? "NSE filings - " + holdings.current.period + " - context only below" : "Quarterly exchange filings - context only below"}>
       {holdingState && <div className="analyser-data-note" role="status">{holdingState}{!preview && !isBse && <button className="text-button" onClick={() => setRetry(n => n + 1)}><RefreshCw size={14} />Retry</button>}</div>}
       <div className="analyser-metrics">{(["FII", "DII", "HNI"] as const).map(key => <div className="analyser-metric context" key={key}><span>{key === "FII" ? "Foreign portfolio investors" : key === "DII" ? "Domestic institutions" : "HNI individuals"}</span><strong>{holdings?.current[key] != null ? number(holdings.current[key]) + "%" : "Not available"}</strong><small>{holdings ? "Reported holding" : "Not supplied"}</small></div>)}{metrics(["promoterHolding", "promoterPledge"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
       {holdings && <a className="analyser-source" href={holdings.sourceUrl} target="_blank" rel="noreferrer">View source filing <ArrowUpRight size={14} /></a>}
     </Section>
 
-    <Section title="Valuation models" note="CMP-anchored fair value estimates">
+    <Section title="Valuation models" note="CMP-anchored fair value estimates - not added to Fundamental score">
       {/* Prominent Current Market Price (CMP) Indicator */}
       <div className="valuation-cmp-banner">
         <div className="cmp-badge">

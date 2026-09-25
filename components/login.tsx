@@ -50,7 +50,7 @@ export default function Login({
             className="anniversary-brand-img"
           />
           <div className="anniversary-brand-text">
-            <span className="anniversary-brand-title">செங்காந்தல்</span>
+            <span className="anniversary-brand-title">செங்காந்தள்™ முதலீட்டுக் குடும்பம்</span>
             <span className="anniversary-brand-sub">RESEARCH & COMMUNITY</span>
           </div>
         </a>
@@ -103,7 +103,7 @@ export default function Login({
             <div className="anniversary-hero-headline-wrap">
               <div className="anniversary-kicker-badge">
                 <span className="anniversary-kicker-dot" />
-                <span>MILESTONE YEAR • முதலீடு முதல் இடம்</span>
+                <span lang="ta">MILESTONE YEAR - முதலீடு முதலில் இடு</span>
               </div>
               <h1 className="anniversary-headline-text">
                 A year of learning.

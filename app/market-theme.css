@@ -5359,3 +5359,159 @@ button.secondary:hover:not(:disabled),
   border-radius: 6px !important;
   padding: 3px 8px !important;
 }
+
+/* Hosted-device stability: keep the terminal dark and contained before hydration. */
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #071420 !important;
+  color: #e2ecf2 !important;
+}
+
+.modern-shell,
+.modern-shell[data-theme="dark"] {
+  background:
+    linear-gradient(120deg, rgba(0, 229, 153, 0.08), transparent 36%),
+    linear-gradient(300deg, rgba(37, 110, 168, 0.12), transparent 34%),
+    #071420 !important;
+  color: #e2ecf2 !important;
+}
+
+.modern-shell .app-header,
+.modern-shell .main-nav,
+.modern-shell .page-heading,
+.modern-shell .panel,
+.modern-shell .table-wrap,
+.modern-shell .search-form,
+.modern-shell .analyser-company,
+.modern-shell .analyser-overview,
+.modern-shell .analyser-metric,
+.modern-shell .analyser-valuations article,
+.modern-shell .scorecard-matrix-accordion,
+.modern-shell .scorecard-matrix-panel,
+.modern-shell .scorecard-table-wrap {
+  background-color: rgba(10, 28, 34, 0.94) !important;
+  border-color: rgba(0, 229, 153, 0.22) !important;
+}
+
+.modern-shell .page-heading h1,
+.modern-shell .panel h2,
+.modern-shell .panel h3,
+.modern-shell .analyser-company h2,
+.modern-shell .scorecard-table td strong {
+  color: #ffffff !important;
+}
+
+.modern-shell td,
+.modern-shell .scorecard-table td,
+.modern-shell p,
+.modern-shell .analyser-data-note {
+  color: #d6e5ed !important;
+}
+
+.modern-shell th,
+.modern-shell .muted,
+.modern-shell small {
+  color: #9cb7c6 !important;
+}
+
+.stock-analyser-report,
+.analyser-section,
+.analyser-metrics,
+.analyser-valuations {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.anniversary-brand,
+.anniversary-brand-text {
+  min-width: 0 !important;
+}
+
+.anniversary-brand-title {
+  max-width: min(52vw, 560px) !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.analyser-metric > strong,
+.analyser-valuations article > strong,
+.scorecard-table td {
+  overflow-wrap: anywhere !important;
+}
+
+.table-wrap,
+.scorecard-table-wrap {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+@media (max-width: 760px) {
+  .brand-title-wrap {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .brand-title-wrap strong,
+  .brand-sub-row small,
+  .brand-sub-row .brand-clock,
+  .brand-motto-pill {
+    white-space: normal !important;
+    width: auto !important;
+  }
+
+  .brand-sub-row {
+    flex-wrap: wrap !important;
+  }
+
+  .analyser-save,
+  .analyser-links,
+  .analyser-tabs,
+  .toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+  }
+
+  .analyser-links a,
+  .analyser-links button,
+  .analyser-tabs button,
+  .toolbar > *,
+  .analyser-save > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .scorecard-table,
+  .table-wrap table,
+  .no-scroll-table table {
+    min-width: 680px !important;
+  }
+
+  .no-scroll-table {
+    overflow-x: auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .anniversary-brand-title {
+    font-size: 17px !important;
+    line-height: 1.35 !important;
+  }
+
+  .anniversary-medallion-badge {
+    width: 112px !important;
+    min-width: 112px !important;
+    height: 112px !important;
+  }
+
+  .anniversary-one-num {
+    font-size: 46px !important;
+  }
+
+  .scorecard-table,
+  .table-wrap table,
+  .no-scroll-table table {
+    min-width: 620px !important;
+  }
+}
