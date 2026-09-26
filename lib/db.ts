@@ -33,6 +33,8 @@ async function ensureIndexes(database: Db) {
     database.collection("messages").createIndex({ createdAt: -1 }),
     database.collection("settings").createIndex({ key: 1 }, { unique: true }),
     database.collection("stakeScans").createIndex({ owner: 1 }, { unique: true }),
+    database.collection("presence").createIndex({ email: 1 }, { unique: true }),
+    database.collection("presence").createIndex({ lastSeenAt: -1 }),
     database.collection("errors").createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 * 86400 })
   ]);
 }

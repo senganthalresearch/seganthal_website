@@ -104,6 +104,23 @@ export default function Terminal({ member, preview = false }: { member: Member; 
 
   useEffect(() => {
     if (preview) return;
+    const heartbeat = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetch("/api/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page: view }),
+        keepalive: true
+      }).catch(() => {});
+    };
+    heartbeat();
+    const timer = setInterval(heartbeat, 30000);
+    window.addEventListener("focus", heartbeat);
+    return () => { clearInterval(timer); window.removeEventListener("focus", heartbeat); };
+  }, [preview, view]);
+
+  useEffect(() => {
+    if (preview) return;
     const load = () => request<SiteSettings>("/api/settings").then(value => { setSettings(value); setSettingsReady(true); }).catch(e => setError(e.message));
     void load();
     const timer = setInterval(() => { if (document.visibilityState === "visible") void load(); }, 60000);
