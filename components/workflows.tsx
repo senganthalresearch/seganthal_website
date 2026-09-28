@@ -1,19 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Check, FileText, Globe2, ListChecks, MessageSquare, Play, Plus, RefreshCw, Search, Send, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, Check, FileText, Globe2, ImagePlus, ListChecks, MessageSquare, Play, Plus, RefreshCw, Search, Send, Upload, X } from "lucide-react";
 import type { Message, ReportValues, WatchItem } from "@/lib/types";
-import { demoStock } from "@/lib/demo";
+import { maxChatImageBytes } from "@/lib/chat-image";
+import { demoStock, demoWatchlist } from "@/lib/demo";
 import { relativeTime, swing } from "@/lib/analytics";
 import { Empty, Loading, Notice, number, request } from "./ui";
 
 type Props = { preview: boolean; onError: (error: string) => void };
+type ChatAttachment = { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string; previewUrl: string };
+
+async function prepareChatImage(file: File): Promise<ChatAttachment> {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a PNG, JPEG or WebP image.");
+  const bitmap = await createImageBitmap(file);
+  try {
+    for (const width of [1600, 1280, 960, 720]) {
+      const scale = Math.min(1, width / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const previewUrl = canvas.toDataURL("image/webp", width >= 1280 ? 0.78 : 0.65);
+      const [header, data] = previewUrl.split(",", 2);
+      const mimeType = header.slice(5, -7) as ChatAttachment["mimeType"];
+      if (["image/jpeg", "image/png", "image/webp"].includes(mimeType) && data.length * 3 / 4 <= maxChatImageBytes) return { mimeType, data, previewUrl };
+    }
+    throw new Error("This image is too large to send. Try a smaller image.");
+  } finally {
+    bitmap.close();
+  }
+}
 
 export function ChatPanel({ preview, onError, canPost = true }: Props & { canPost?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(!preview);
+  const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
+  const [imageBusy, setImageBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (preview) return;
@@ -37,16 +62,30 @@ export function ChatPanel({ preview, onError, canPost = true }: Props & { canPos
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (preview) return;
+    if (preview || (!text.trim() && !attachment)) return;
     setBusy(true);
     try {
-      await request("/api/chat", { method: "POST", body: JSON.stringify({ text }) });
+      await request("/api/chat", { method: "POST", body: JSON.stringify({ text, ...(attachment ? { image: { mimeType: attachment.mimeType, data: attachment.data } } : {}) }) });
       setText("");
+      setAttachment(null);
       await load();
     } catch (e) {
       onError((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function selectImage(file?: File) {
+    if (!file) return;
+    setImageBusy(true);
+    try {
+      setAttachment(await prepareChatImage(file));
+      onError("");
+    } catch (error) {
+      onError((error as Error).message);
+    } finally {
+      setImageBusy(false);
     }
   }
 
@@ -62,18 +101,23 @@ export function ChatPanel({ preview, onError, canPost = true }: Props & { canPos
     <div className="chat-messages">
       {loading ? <Loading text="Loading conversations..." /> : messages.length ? messages.map(m => <article className="chat-message" key={m.id}>
         <span className="avatar">{m.name.slice(0, 1)}</span>
-        <div><strong>{m.name}</strong><small>{relativeTime(m.createdAt)}</small><p>{m.text}</p></div>
+        <div><strong>{m.name}</strong><small>{relativeTime(m.createdAt)}</small>{m.text && <p>{m.text}</p>}{m.imageId && <a className="chat-image-link" href={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} target="_blank" rel="noreferrer" aria-label={"Open image shared by " + m.name}><img src={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} alt={"Image shared by " + m.name} loading="lazy" /></a>}</div>
       </article>) : <Empty title="A place to think together" text="Share a research idea, ask a question, or discuss a company with your team." />}
     </div>
     <form onSubmit={send} className="chat-compose">
-      <textarea aria-label="Message to the team" placeholder="Share a thought with your team..." value={text} onChange={e => setText(e.target.value)} maxLength={2000} rows={2} required disabled={preview || !canPost} />
-      <button className="button primary" disabled={preview || !canPost || busy || !text.trim()}><Send size={17} />{busy ? "Sending..." : "Send"}</button>
+      <div className="chat-compose-main">
+        <textarea aria-label="Message to the team" placeholder="Share a thought with your team..." value={text} onChange={e => setText(e.target.value)} maxLength={2000} rows={2} required={!attachment} disabled={preview || !canPost || busy} />
+        <label className="chat-attach-button" title="Add image"><ImagePlus size={19} /><input aria-label="Add image" type="file" accept="image/png,image/jpeg,image/webp" disabled={preview || !canPost || busy || imageBusy} onChange={e => { void selectImage(e.target.files?.[0]); e.target.value = ""; }} /></label>
+        <button className="button primary" disabled={preview || !canPost || busy || imageBusy || (!text.trim() && !attachment)}><Send size={17} />{busy ? "Sending..." : "Send"}</button>
+      </div>
+      {attachment && <div className="chat-attachment-preview"><img src={attachment.previewUrl} alt="Selected image" /><button type="button" className="icon-button" title="Remove image" aria-label="Remove image" onClick={() => setAttachment(null)}><X size={16} /></button></div>}
     </form>
   </section>;
 }
 
 type SwingResult = Partial<ReturnType<typeof swing>> & { symbol: string; error?: string };
 type SwingMode = "single" | "watchlist" | "market" | "smallcap";
+type StockSuggestion = { symbol: string; name: string; exchange?: string };
 const previewMarket = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC", "LT", "SBIN", "BHARTIARTL", "HINDUNILVR", "AXISBANK", "KOTAKBANK", "MARUTI", "SUNPHARMA", "TITAN", "BAJFINANCE", "ASIANPAINT", "HCLTECH", "WIPRO", "TATASTEEL", "ULTRACEMCO", "NESTLEIND", "POWERGRID", "NTPC", "ONGC", "ADANIENT", "ADANIPORTS", "COALINDIA", "TECHM", "JSWSTEEL", "GRASIM", "DRREDDY", "CIPLA", "BAJAJFINSV", "HEROMOTOCO", "EICHERMOT", "APOLLOHOSP", "BRITANNIA", "DIVISLAB", "TATAMOTORS"];
 const previewSmallcap = ["CAMS", "CDSL", "KAYNES", "KPITTECH", "KEI", "PERSISTENT", "TATAELXSI", "POLYCAB", "DIXON", "AMBER", "BSOFT", "ZENSARTECH", "IEX", "IRCTC", "JUBLINGREA", "KFINTECH", "LATENTVIEW", "RITES", "MAZDOCK", "COCHINSHIP"];
 
@@ -85,6 +129,9 @@ export function SwingPanel({ preview, onError, watchlist }: Props & { watchlist:
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [source, setSource] = useState("");
+  const [suggestions, setSuggestions] = useState<StockSuggestion[]>([]);
+  const [selectedSymbol, setSelectedSymbol] = useState("");
+  const symbolInput = useRef<HTMLInputElement>(null);
 
   async function universe(kind: "market" | "smallcap") {
     if (preview) return { symbols: kind === "smallcap" ? previewSmallcap : previewMarket, source: "Preview basket" };
@@ -117,9 +164,38 @@ export function SwingPanel({ preview, onError, watchlist }: Props & { watchlist:
     }
   }
 
+  useEffect(() => {
+    const text = symbols.trim();
+    if (mode !== "single" || busy || text.length < 3 || /[,;]/.test(text) || selectedSymbol === text) {
+      setSuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const results = preview
+          ? demoWatchlist.filter(item => (item.symbol + item.name).toLowerCase().includes(text.toLowerCase())).map(item => ({ symbol: item.symbol, name: item.name, exchange: "NSE" }))
+          : (await request<{ results: StockSuggestion[] }>("/api/swing/search?q=" + encodeURIComponent(text), { signal: controller.signal })).results;
+        setSuggestions(results);
+      } catch {
+        if (!controller.signal.aborted) setSuggestions([]);
+      }
+    }, 250);
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [symbols, mode, preview, busy, selectedSymbol]);
+
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (mode === "single") return run(symbols.split(/[\s,;]+/), "stock");
+    if (mode === "single") {
+      setSource("");
+      if (selectedSymbol) return run([selectedSymbol], "stock");
+      if (/[,;]/.test(symbols)) return run(symbols.split(/[,;\s]+/), "stocks");
+      const exact = suggestions.find(item => item.symbol.toUpperCase() === symbols.trim().toUpperCase() || item.name.toUpperCase() === symbols.trim().toUpperCase());
+      if (exact) return run([exact.symbol], "stock");
+      if (/^[A-Z0-9&.^=-]+$/i.test(symbols.trim())) return run([symbols.trim()], "stock");
+      onError("Select a company from the suggestions before checking its setup.");
+      return;
+    }
     if (mode === "watchlist") return run(watchlist.map(i => i.symbol), "watchlist");
     const data = await universe(mode);
     setSource(data.source);
@@ -152,7 +228,7 @@ export function SwingPanel({ preview, onError, watchlist }: Props & { watchlist:
         </label>)}
       </div>
       <form onSubmit={submit}>
-        {mode === "single" && <label className="swing-symbol-input">Company name or NSE symbol<input value={symbols} onChange={e => setSymbols(e.target.value.toUpperCase())} placeholder="TCS, INFY, RELIANCE" required disabled={busy} /></label>}
+        {mode === "single" && <div className="swing-search-block"><label className="swing-symbol-input">Company name or NSE symbol<input ref={symbolInput} value={symbols} onChange={e => { setSelectedSymbol(""); setSymbols(e.target.value.toUpperCase()); }} onKeyDown={e => { if (e.key === "ArrowDown" && suggestions.length) { e.preventDefault(); document.querySelector<HTMLButtonElement>("#swing-suggestion-list button")?.focus(); } else if (e.key === "Escape") setSuggestions([]); }} aria-autocomplete="list" aria-expanded={suggestions.length > 0} aria-controls="swing-suggestion-list" placeholder="TCS or company name" required disabled={busy} /></label>{suggestions.length > 0 && <div id="swing-suggestion-list" className="swing-suggestions" role="listbox" aria-label="Matching companies">{suggestions.map(item => <button type="button" role="option" aria-selected={false} key={item.symbol} disabled={busy} onClick={() => { setSelectedSymbol(item.symbol); setSymbols(item.symbol); setSuggestions([]); symbolInput.current?.focus(); }} onKeyDown={e => { if (e.key === "Escape") { setSuggestions([]); symbolInput.current?.focus(); } }}><span><strong>{item.name}</strong><small>{item.symbol}{item.exchange ? " - " + item.exchange : ""}</small></span><ArrowRight size={15} /></button>)}</div>}</div>}
         <div className="swing-actions">
           <label>Trade horizon<select value={horizon} onChange={e => setHorizon(e.target.value)} disabled={busy}><option value="short">Short term - EMA 9 / 21</option><option value="long">Long term - EMA 50 / 200</option></select></label>
           <button className="button primary" disabled={busy || (mode === "watchlist" && !watchlist.length)}><Play size={16} />{buttonLabel(mode)}</button>

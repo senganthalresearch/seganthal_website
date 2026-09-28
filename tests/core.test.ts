@@ -4,6 +4,29 @@ import { csvCell, ema, percentFraction, qualityScore, rsi, swing } from '../lib/
 import { maySignIn, normalizeEmail } from '../lib/access';
 import { reportSchema, symbolSchema } from '../lib/validation';
 import type { Candle, Metric } from '../lib/types';
+import { parseWatchlistEntries } from '../lib/watchlist-import';
+import { chatImageSchema, decodeChatImage } from '../lib/chat-image';
+import { newsImage } from '../lib/news-image';
+
+test('chat images accept supported image signatures within the size limit', () => {
+  const png = { mimeType: 'image/png' as const, data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGQAAAABJRU5ErkJggg==' };
+  assert.equal(chatImageSchema.safeParse(png).success, true);
+  assert.ok(decodeChatImage(png));
+  assert.equal(decodeChatImage({ ...png, mimeType: 'image/jpeg' }), null);
+  assert.equal(decodeChatImage({ ...png, data: Buffer.concat([Buffer.from(png.data, 'base64'), Buffer.alloc(350_000)]).toString('base64') }), null);
+  assert.equal(chatImageSchema.safeParse({ ...png, mimeType: 'image/svg+xml' }).success, false);
+});
+
+test('news images come from HTTPS feed metadata or description images', () => {
+  assert.equal(newsImage({ 'media:thumbnail': { '@_url': 'https://example.com/photo.jpg' } }), 'https://example.com/photo.jpg');
+  assert.equal(newsImage({ description: '&lt;img src=&quot;https://example.com/story.jpg&quot;&gt;' }), 'https://example.com/story.jpg');
+  assert.equal(newsImage({ enclosure: { '@_url': 'javascript:alert(1)' } }), null);
+});
+
+test('watchlist import keeps company names together and deduplicates entries', () => {
+  assert.deepEqual(parseWatchlistEntries('Netweb Technologies, E2E Networks\nTCS; Netweb Technologies'), ['Netweb Technologies', 'E2E Networks', 'TCS']);
+  assert.deepEqual(parseWatchlistEntries('  Tata   Consultancy Services  \r\n\r\n  E2E Networks  '), ['Tata Consultancy Services', 'E2E Networks']);
+});
 
 test('only verified Google accounts with active membership can sign in', () => {
   assert.equal(maySignIn('google', true, true), true);

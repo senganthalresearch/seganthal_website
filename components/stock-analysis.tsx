@@ -61,6 +61,7 @@ const rules: Record<string, string> = {
 const formulas: Record<string, string> = {
   pe: "CMP / EPS",
   pb: "CMP / book value per share",
+  peg: "P/E ratio / EPS CAGR",
   yield: "Dividend / CMP x 100",
   roe: "PAT / shareholders' equity x 100",
   roce: "ROE x 0.88 approximation",
@@ -306,11 +307,11 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
     </Section>
 
     <Section title="Key metrics" note={preview ? "Illustrative sample - not added again to score" : "Source: Yahoo Finance + exchange filings - context only"}>
-      <div className="analyser-metrics">{metrics(["pe", "pb", "eps", "bookValue", "yield", "roe", "roce", "de", "interestCoverage", "opm", "npm"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
+      <div className="analyser-metrics">{metrics(["pe", "pb", "peg", "eps", "bookValue", "yield", "earningsGrowth"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 
-    <Section title="Business metrics" note="Business context; duplicated score factors are not added again">
-      <div className="analyser-metrics">{metrics(["marketCap", "revenue", "netIncome", "revenueGrowth", "patGrowth", "epsGrowth", "earningsGrowth", "fcf", "ocfPat", "fcfYield"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
+    <Section title="Business metrics" note="Business context; score factors appear in the scorecard">
+      <div className="analyser-metrics">{metrics(["marketCap", "revenue", "netIncome", "totalCash", "operatingCashFlow"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 
     <Section title="Shareholding pattern" note={holdings ? "NSE filings - " + holdings.current.period + " - context only below" : "Quarterly exchange filings - context only below"}>
@@ -366,7 +367,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
           </small>
         </article>
       </div>
-      <div className="analyser-metrics">{metrics(["currentRatio", "quickRatio", "totalDebt", "totalCash", "operatingCashFlow", "fcf", "intrinsicValue", "marginSafety"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
+      <div className="analyser-metrics">{metrics(["quickRatio", "totalDebt"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 
     <div className="analyser-tabs" role="tablist" aria-label="Research detail">

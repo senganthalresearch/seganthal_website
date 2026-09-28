@@ -1,8 +1,9 @@
 import { XMLParser } from "fast-xml-parser";
 import { api, requireMember, limited, HttpError } from "@/lib/http";
 import { cached } from "@/lib/market";
+import { newsImage } from "@/lib/news-image";
 
-type NewsRow = { title: string; url: string; source: string; publishedAt: string | null };
+type NewsRow = { title: string; url: string; source: string; publishedAt: string | null; imageUrl: string | null };
 const parser = new XMLParser({ ignoreAttributes: false, processEntities: false });
 const moneycontrolFeeds = [
   "https://www.moneycontrol.com/rss/latestnews.xml",
@@ -37,7 +38,8 @@ function parseItems(xml: string, fallbackSource: string): NewsRow[] {
       title: titleOf(item.title).replace(/\s+-\s+Moneycontrol\.com$/i, ""),
       url: url.startsWith("https://") ? url : "",
       source: typeof source === "object" ? String(source?.["#text"] || fallbackSource) : String(source || fallbackSource),
-      publishedAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null
+      publishedAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null,
+      imageUrl: newsImage(item)
     };
   }).filter(item => item.title && item.url);
 }
@@ -94,7 +96,7 @@ export const GET = api(async request => {
   const raw = new URL(request.url).searchParams.get("q") || "India stock market";
   const source = new URL(request.url).searchParams.get("source") === "moneycontrol" ? "moneycontrol" : new URL(request.url).searchParams.get("source") === "google" ? "google" : "all";
   const query = raw.trim().slice(0, 100);
-  return cached("news:v2:" + source + ":" + query, async () => {
+  return cached("news:v3:" + source + ":" + query, async () => {
     const results = await Promise.allSettled([
       ...(source !== "moneycontrol" ? [googleNews(query)] : []),
       ...(source !== "google" ? [moneycontrolNews(query)] : [])

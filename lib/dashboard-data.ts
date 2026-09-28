@@ -1,7 +1,6 @@
-import { cached, history, quotes } from "./market";
+import { cached, quotes } from "./market";
 import { numeric, parseCsv, quarterReturns } from "./data-utils";
 import type { Quote } from "./types";
-import YahooFinance from "yahoo-finance2";
 
 export const nseBase = "https://www.nseindia.com";
 
@@ -9,7 +8,14 @@ type Row = Record<string, unknown>;
 
 export async function nseJson<T = Record<string, unknown>>(path: string): Promise<T> {
   return cached("nse:" + path, async () => {
-    const r = await fetch(nseBase + path, { signal: AbortSignal.timeout(12000), headers: { Accept: "application/json" } });
+    const r = await fetch(nseBase + path, {
+      signal: AbortSignal.timeout(12000),
+      headers: {
+        Accept: "application/json,text/plain,*/*",
+        "User-Agent": "Mozilla/5.0",
+        Referer: "https://www.nseindia.com/"
+      }
+    });
     if (!r.ok) throw new Error("NSE feed unavailable");
     return r.json() as Promise<T>;
   }, 60000);
@@ -139,67 +145,68 @@ export async function migrations(days = 180, all = false) {
 }
 
 export const sectors = [
-  ["NIFTY PHARMA", ["^CNXPHARMA", "PHARMABEES.NS"]],
-  ["NIFTY IT", ["^CNXIT", "ITBEES.NS"]],
-  ["NIFTY METAL", ["^CNXMETAL", "METALBEES.NS"]],
-  ["NIFTY REALTY", ["^CNXREALTY"]],
-  ["NIFTY AUTO", ["^CNXAUTO", "AUTOBEES.NS"]],
-  ["NIFTY BANK", ["^NSEBANK", "BANKBEES.NS"]],
-  ["NIFTY PSU BANK", ["^CNXPSUBANK", "PSUBANKBEES.NS"]],
-  ["NIFTY FIN SERVICE", ["NIFTY_FIN_SERVICE.NS", "^CNXFINANCE"]],
-  ["NIFTY ENERGY", ["^CNXENERGY"]],
-  ["NIFTY FMCG", ["^CNXFMCG"]]
+  "NIFTY IT",
+  "NIFTY AUTO",
+  "NIFTY PHARMA",
+  "NIFTY FMCG",
+  "NIFTY METAL",
+  "NIFTY BANK",
+  "NIFTY PSU BANK",
+  "NIFTY FINANCIAL SERVICES",
+  "NIFTY REALTY",
+  "NIFTY ENERGY",
+  "NIFTY MEDIA"
 ] as const;
 
-const sectorBaskets: Record<(typeof sectors)[number][0], string[]> = {
-  "NIFTY PHARMA": ["SUNPHARMA", "CIPLA", "DRREDDY", "DIVISLAB", "LUPIN"],
-  "NIFTY IT": ["TCS", "INFY", "HCLTECH", "WIPRO", "TECHM"],
-  "NIFTY METAL": ["TATASTEEL", "JSWSTEEL", "HINDALCO", "JINDALSTEL", "VEDL"],
-  "NIFTY REALTY": ["DLF", "LODHA", "GODREJPROP", "OBEROIRLTY", "PHOENIXLTD"],
-  "NIFTY AUTO": ["MARUTI", "TATAMOTORS", "M&M", "EICHERMOT", "HEROMOTOCO"],
-  "NIFTY BANK": ["HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK", "KOTAKBANK"],
-  "NIFTY PSU BANK": ["SBIN", "BANKBARODA", "PNB", "CANBK", "UNIONBANK"],
-  "NIFTY FIN SERVICE": ["BAJFINANCE", "BAJAJFINSV", "SBILIFE", "HDFCLIFE", "CHOLAFIN"],
-  "NIFTY ENERGY": ["RELIANCE", "ONGC", "NTPC", "POWERGRID", "COALINDIA"],
-  "NIFTY FMCG": ["ITC", "HINDUNILVR", "NESTLEIND", "BRITANNIA", "DABUR"]
-};
-
-function averageReturns(rows: ReturnType<typeof quarterReturns>[]) {
-  const quarters = rows[0]?.map(r => r.quarter) || quarterReturns([]).map(r => r.quarter);
-  return quarters.map((quarter, i) => {
-    const values = rows.map(r => r[i]?.value).filter((v): v is number => v !== null && v !== undefined);
-    return { quarter, value: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null };
-  });
+function dateParam(date: Date) {
+  return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
 }
 
-async function basketReturns(name: (typeof sectors)[number][0]) {
-  const settled = await Promise.allSettled(sectorBaskets[name].map(async symbol => quarterReturns(await history(symbol), new Date(), true)));
-  const rows = settled.flatMap(result => result.status === "fulfilled" && result.value.some(r => r.value !== null) ? [result.value] : []);
-  return rows.length ? averageReturns(rows) : null;
+function nseDate(value: unknown) {
+  const text = String(value || "").trim();
+  const match = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(text);
+  if (match) {
+    const month = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].indexOf(match[2].toUpperCase());
+    if (month >= 0) return new Date(Date.UTC(Number(match[3]), month, Number(match[1]))).toISOString();
+  }
+  const parsed = new Date(text);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+}
+
+async function historicalIndexRows(index: string) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 760);
+  const rows: Row[] = [];
+  for (let start = new Date(from); start <= to; start.setDate(start.getDate() + 120)) {
+    const end = new Date(start);
+    end.setDate(end.getDate() + 119);
+    if (end > to) end.setTime(to.getTime());
+    try {
+      const response = await nseJson<{ data: Row[] }>("/api/historicalOR/indicesHistory?indexType=" + encodeURIComponent(index) + "&from=" + dateParam(start) + "&to=" + dateParam(end));
+      if (Array.isArray(response.data)) rows.push(...response.data);
+    } catch {}
+  }
+  const seen = new Set<string>();
+  return rows.flatMap(row => {
+    const date = nseDate(row.EOD_TIMESTAMP ?? row.HI_TIMESTAMP);
+    const close = numeric(row.EOD_CLOSE_INDEX_VAL);
+    if (!date || close === null || close <= 0 || seen.has(date.slice(0, 10))) return [];
+    seen.add(date.slice(0, 10));
+    return [{ date, close }];
+  }).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function rotation() {
-  return cached("sector:rotation:v3", async () => {
-    const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
-    const start = new Date();
-    start.setFullYear(start.getFullYear() - 3);
-    const rows = [];
-    for (let i = 0; i < sectors.length; i += 3) {
-      rows.push(...await Promise.all(sectors.slice(i, i + 3).map(async ([name, symbols]) => {
-        for (const symbol of symbols) {
-          try {
-            const data = await yahoo.chart(symbol, { period1: start, interval: "1mo" });
-            const returns = quarterReturns(data.quotes.filter(q => q.close !== null).map(q => ({ date: q.date.toISOString(), close: q.close! })), new Date(), true);
-            if (returns.some(r => r.value !== null)) return { name, returns, error: symbols[0] === symbol ? "" : "Proxy history: " + symbol };
-          } catch {}
-        }
-        const basket = await basketReturns(name);
-        if (basket) return { name, returns: basket, error: "Representative basket" };
-        return { name, returns: quarterReturns([]), error: "Price history unavailable" };
-      })));
-    }
-    return { rows, source: "Yahoo Finance sector index history with representative basket fallback - completed calendar quarters", fetchedAt: new Date().toISOString() };
-  }, 3600000);
+  return cached("sector:rotation:nse:v1", async () => {
+    const rows = await Promise.all(sectors.map(async name => {
+      const history = await historicalIndexRows(name);
+      const returns = quarterReturns(history, new Date(), true);
+      return { name, returns, error: history.length < 40 ? `NSE returned ${history.length} usable daily rows` : "" };
+    }));
+    rows.sort((a, b) => (b.returns.at(-1)?.value ?? -999) - (a.returns.at(-1)?.value ?? -999));
+    return { rows, source: "NSE historicalOR/indicesHistory sector index closes - quarterly returns", fetchedAt: new Date().toISOString() };
+  }, 21600000);
 }
 
 export type Holding = { FII: number | null; DII: number | null; HNI: number | null; promoterHolding: number | null; promoterPledge: number | null };

@@ -33,12 +33,13 @@ function firstNumber(...values: (number | null)[]) { return values.find(value =>
 function ratio(numerator: number | null, denominator: number | null, scale = 1) { return numerator !== null && denominator !== null && denominator !== 0 ? numerator / denominator * scale : null; }
 function growth(current: number | null, previous: number | null) { return current !== null && previous !== null && previous !== 0 ? (current / previous - 1) * 100 : null; }
 function abs(value: number | null) { return value === null ? null : Math.abs(value); }
+function perShare(total: number | null, shares: number | null) { return total !== null && shares !== null && shares > 0 ? total / shares : null; }
 function cagr(current: number | null, start: number | null, years: number) {
   return current !== null && start !== null && current > 0 && start > 0 && years > 0 ? (Math.pow(current / start, 1 / years) - 1) * 100 : null;
 }
 function cagrFromRows(rows: FundamentalRow[], accessor: (row: FundamentalRow | undefined) => number | null) {
-  const latest = rows[0];
-  const older = rows.slice(1).reverse().find(row => accessor(row) !== null);
+  const latest = rows.find(row => accessor(row) !== null);
+  const older = latest ? rows.slice(rows.indexOf(latest) + 1).reverse().find(row => accessor(row) !== null) : undefined;
   if (!latest || !older) return null;
   const years = Math.max(1, Math.min(5, Math.round((dateMs(latest.date) - dateMs(older.date)) / 31557600000) || rows.indexOf(older)));
   return cagr(accessor(latest), accessor(older), years);
@@ -107,7 +108,7 @@ async function quarterlyFundamentals(symbol: string) {
   }, 3600000);
 }
 
-function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false) {
+function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false, shares: number | null = null) {
   const seenDates = new Set<string>();
   const parsed = [];
   for (const r of rows) {
@@ -119,7 +120,7 @@ function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false) {
     const rev = rowNumber(r, "totalRevenue");
     const op = firstNumber(rowNumber(r, "operatingIncome"), rowNumber(r, "ebit"));
     const pat = firstNumber(rowNumber(r, "netIncomeCommonStockholders"), rowNumber(r, "netIncome"));
-    const eps = firstNumber(rowNumber(r, "dilutedEPS"), rowNumber(r, "basicEPS"));
+    const eps = firstNumber(rowNumber(r, "dilutedEPS"), rowNumber(r, "basicEPS"), isQuarterly ? null : perShare(pat, shares));
 
     if (rev !== null || pat !== null || op !== null) {
       seenDates.add(dateKey);
@@ -158,8 +159,22 @@ export async function quotes(symbols: string[]): Promise<Quote[]> {
 
 export async function search(query: string) {
   return cached("search:" + query, async () => {
-    const result = await yahoo.search(query, { quotesCount: 10, newsCount: 0 });
-    return result.quotes.filter(q => "symbol" in q && typeof q.symbol === "string" && /\.(NS|BO)$/.test(q.symbol)).map(q => ({ symbol: "symbol" in q ? String(q.symbol).replace(/\.NS$/, "") : "", name: "shortname" in q ? String(q.shortname) : "symbol" in q ? String(q.symbol) : "" }));
+    const result = await yahoo.search(query, { quotesCount: 20, newsCount: 0 });
+    const rows = result.quotes
+      .filter(q => "symbol" in q && typeof q.symbol === "string" && /\.(NS|BO)$/.test(q.symbol))
+      .map(q => {
+        const raw = "symbol" in q ? String(q.symbol) : "";
+        const exchange = raw.endsWith(".BO") ? "BSE" : "NSE";
+        return { symbol: exchange === "BSE" ? raw : raw.replace(/\.NS$/, ""), name: "longname" in q && q.longname ? String(q.longname) : "shortname" in q ? String(q.shortname) : raw, exchange };
+      })
+      .sort((a, b) => a.exchange === b.exchange ? 0 : a.exchange === "NSE" ? -1 : 1);
+    const seen = new Set<string>();
+    return rows.filter(row => {
+      const key = row.symbol.replace(/\.(NS|BO)$/, "").toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 10);
   }, 3600000);
 }
 
@@ -205,12 +220,14 @@ export async function analyze(symbol: string): Promise<Stock> {
     const annualEbit = firstNumber(rowNumber(latest, "ebit"), annualOperatingIncome);
     const annualInterestExpense = abs(firstNumber(rowNumber(latest, "interestExpense"), rowNumber(latest, "interestExpenseNonOperating")));
     const annualOperatingCashFlow = rowNumber(latest, "operatingCashFlow");
-    const annualFreeCashFlow = rowNumber(latest, "freeCashFlow");
+    const annualCapex = firstNumber(rowNumber(latest, "capitalExpenditure"), rowNumber(latest, "capitalExpenditures"));
+    const annualFreeCashFlow = firstNumber(rowNumber(latest, "freeCashFlow"), annualOperatingCashFlow !== null && annualCapex !== null ? annualOperatingCashFlow - Math.abs(annualCapex) : null);
+    const shares = firstNumber(finite(k?.sharesOutstanding), finite(d?.sharesOutstanding));
     const annualRevenueGrowth = growth(annualRevenue, rowNumber(previous, "totalRevenue"));
     const annualEarningsGrowth = growth(annualNetIncome, firstNumber(rowNumber(previous, "netIncomeCommonStockholders"), rowNumber(previous, "netIncome")));
     const annualRevenueCagr = cagrFromRows(annual, row => rowNumber(row, "totalRevenue"));
     const annualPatCagr = cagrFromRows(annual, row => firstNumber(rowNumber(row, "netIncomeCommonStockholders"), rowNumber(row, "netIncome")));
-    const annualEpsCagr = cagrFromRows(annual, row => firstNumber(rowNumber(row, "dilutedEPS"), rowNumber(row, "basicEPS"), rowNumber(row, "dilutedEPSContinuingOperations"), rowNumber(row, "basicEPSContinuingOperations")));
+    const annualEpsCagr = cagrFromRows(annual, row => firstNumber(rowNumber(row, "dilutedEPS"), rowNumber(row, "basicEPS"), rowNumber(row, "dilutedEPSContinuingOperations"), rowNumber(row, "basicEPSContinuingOperations"), perShare(firstNumber(rowNumber(row, "netIncomeCommonStockholders"), rowNumber(row, "netIncome")), shares)));
     const holding = holdingResult.status === "fulfilled" ? holdingResult.value : null;
     const quoteSource = "Yahoo Finance - quoteSummary";
     const fallback = (primary: number | null, secondary: number | null) => ({
@@ -226,8 +243,15 @@ export async function analyze(symbol: string): Promise<Stock> {
       add(key, label, picked.value, unit, check, picked.source, picked.period);
     };
 
-    add("pe", "P/E ratio", finite(d?.trailingPE), MULTIPLE, v => v > 0 && v < 25);
-    add("pb", "Price / book", finite(k?.priceToBook), MULTIPLE, v => v > 0 && v < 3);
+    const eps = firstNumber(finite(k?.trailingEps), rowNumber(latest, "dilutedEPS"), rowNumber(latest, "basicEPS"), perShare(annualNetIncome, shares));
+    const book = firstNumber(finite(k?.bookValue), perShare(annualEquity, shares));
+    const pe = firstNumber(finite(d?.trailingPE), q.price !== null && eps !== null && eps > 0 ? q.price / eps : null);
+    const pb = firstNumber(finite(k?.priceToBook), q.price !== null && book !== null && book > 0 ? q.price / book : null);
+    add("pe", "P/E ratio", pe, MULTIPLE, v => v > 0 && v < 25);
+    add("pb", "Price / book", pb, MULTIPLE, v => v > 0 && v < 3);
+    const calculatedPeg = pe !== null && pe > 0 && annualEpsCagr !== null && annualEpsCagr > 0 ? pe / annualEpsCagr : null;
+    const reportedPeg = annualEpsCagr === null ? finite(k?.pegRatio) : null;
+    add("peg", "PEG ratio", calculatedPeg ?? reportedPeg, MULTIPLE, v => v > 0 && v < 1.5, calculatedPeg !== null ? annualSource + " + P/E" : quoteSource, calculatedPeg !== null ? annualPeriod : undefined);
     add("yield", "Dividend yield", percentFraction(d?.dividendYield), "%");
     const pickedRoe = fallback(percentFraction(f?.returnOnEquity), ratio(annualNetIncome, annualEquity, 100));
     add("roe", "Return on equity", pickedRoe.value, "%", v => v >= 15, pickedRoe.source, pickedRoe.period);
@@ -242,11 +266,10 @@ export async function analyze(symbol: string): Promise<Stock> {
     addFallback("earningsGrowth", "Earnings growth (YoY)", percentFraction(f?.earningsGrowth), annualEarningsGrowth, "%", v => v > 0);
     addFallback("fcf", "Free cash flow", finite(f?.freeCashflow), annualFreeCashFlow, INR, v => v > 0);
     add("ocfPat", "OCF / PAT", ratio(annualOperatingCashFlow, annualNetIncome), MULTIPLE, v => v > 0.5, annualSource, annualPeriod);
-    const marketCap = finite(d?.marketCap);
+    const marketCap = firstNumber(finite(d?.marketCap), q.price !== null && shares !== null ? q.price * shares : null);
     add("marketCap", "Market capitalisation", marketCap, INR);
     addFallback("currentRatio", "Current ratio", finite(f?.currentRatio), ratio(annualCurrentAssets, annualCurrentLiabilities), MULTIPLE, v => v >= 1.5 && v <= 2.5);
 
-    const eps = finite(k?.trailingEps), book = finite(k?.bookValue);
     const growthForIntrinsic = Math.max(5, ...[percentFraction(f?.earningsGrowth), annualRevenueGrowth].filter((value): value is number => value !== null));
     const intrinsic = eps !== null && eps > 0 ? eps * (8.5 + 2 * growthForIntrinsic) * 6 / 8 : null;
     add("intrinsicValue", "Intrinsic value", intrinsic, INR);
@@ -275,7 +298,7 @@ export async function analyze(symbol: string): Promise<Stock> {
       coverage,
       history: historyResult.status === "fulfilled" ? historyResult.value : [],
       financials: {
-        annual: parseFinancialRows(annual, false),
+        annual: parseFinancialRows(annual, false, shares),
         quarterly: parseFinancialRows(quarterlyResult.status === "fulfilled" ? quarterlyResult.value : [], true)
       },
       fetchedAt: new Date().toISOString(),

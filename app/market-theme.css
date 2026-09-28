@@ -5515,3 +5515,148 @@ html[data-theme="dark"] body {
     min-width: 620px !important;
   }
 }
+
+.snapshot-feature h3 {
+  font-size: 24px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.snapshot-feature > strong {
+  font-size: 21px;
+  letter-spacing: 0;
+}
+
+.snapshot-mini h3 {
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.snapshot-mini strong {
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.deals-one-view td.deal-side.buy,
+.deals-one-view tbody tr:hover td.deal-side.buy {
+  color: #00e599 !important;
+  font-weight: 800;
+}
+
+.deals-one-view td.deal-side.sell,
+.deals-one-view tbody tr:hover td.deal-side.sell {
+  color: #ff5270 !important;
+  font-weight: 800;
+}
+
+.news-card-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.chat-compose {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.chat-compose-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.chat-compose-main textarea {
+  flex: 1;
+}
+
+.chat-attach-button {
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chat-attach-button:focus-within {
+  outline: 3px solid #658bac;
+  outline-offset: 3px;
+}
+
+.chat-attach-button:has(input:disabled) {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.chat-attach-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chat-attachment-preview {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.chat-attachment-preview img {
+  display: block;
+  max-width: 180px;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.chat-attachment-preview .icon-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--bg);
+}
+
+.chat-image-link {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+.chat-image-link img {
+  display: block;
+  max-width: min(100%, 360px);
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+@media (max-width: 760px) {
+  .chat-compose-main {
+    flex-wrap: wrap;
+  }
+
+  .chat-compose-main textarea {
+    flex-basis: 100%;
+  }
+
+  .chat-compose-main .button {
+    flex: 1;
+  }
+}

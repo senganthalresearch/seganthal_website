@@ -14,6 +14,10 @@ import { Administration, ContentEditor } from "./administration";
 import { AboutUs } from "./community";
 import { defaultSettings, type SiteSettings } from "@/lib/site-settings";
 import { can, roleNames } from "@/lib/permissions";
+import { parseWatchlistEntries } from "@/lib/watchlist-import";
+
+type ImportChoice = { symbol: string; name: string; exchange?: string };
+type ImportMatch = { input: string; choices: ImportChoice[]; symbol: string };
 
 type View = "Dashboard" | "Stock Analyzer" | "Watchlist" | "News" | "Team Chat" | "PDF Upload" | "Swing Trade" | "Admin" | "About Us";
 
@@ -66,6 +70,7 @@ export default function Terminal({ member, preview = false }: { member: Member; 
   const [newGroup, setNewGroup] = useState("General");
   const [importText, setImportText] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [importMatches, setImportMatches] = useState<ImportMatch[] | null>(null);
 
   useEffect(() => {
     const next = "dark";
@@ -227,24 +232,41 @@ export default function Terminal({ member, preview = false }: { member: Member; 
     }
   }
 
-  async function importItems() {
-    const symbols = [...new Set(importText.toUpperCase().split(/[\s,;]+/).filter(Boolean))];
-    if (!symbols.length || symbols.length > 100) { setError("Enter between 1 and 100 stock symbols."); return; }
-    if (preview) {
-      const added = symbols.map(symbol => ({ symbol, name: symbol, group: newGroup.trim() || "General" }));
-      setWatchlist(prev => [...prev.filter(item => !symbols.includes(item.symbol)), ...added]);
-      setImportOpen(false);
-      setImportText("");
-      setToast(`Imported ${symbols.length} stocks to watchlist (Preview).`);
-      return;
-    }
+  async function reviewImport() {
+    const entries = parseWatchlistEntries(importText);
+    if (!entries.length || entries.length > 100) { setError("Enter between 1 and 100 companies or stock symbols, separated by commas or new lines."); return; }
     setBusy(true);
+    setError("");
     try {
-      await request("/api/watchlist", { method: "POST", body: JSON.stringify({ items: symbols.map(symbol => ({ symbol, name: symbol, group: newGroup.trim() || "General" })) }) });
-      await loadWatchlist();
+      const matches = preview
+        ? entries.map(input => ({ input, choices: demoWatchlist.filter(item => item.symbol.toLowerCase() === input.toLowerCase() || item.name.toLowerCase().includes(input.toLowerCase())).map(item => ({ symbol: item.symbol, name: item.name, exchange: "NSE" })) }))
+        : (await request<{ matches: { input: string; choices: ImportChoice[] }[] }>("/api/watchlist/resolve", { method: "POST", body: JSON.stringify({ entries }) })).matches;
+      setImportMatches(matches.map(match => ({ ...match, symbol: match.choices[0]?.symbol || "" })));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importItems() {
+    const items = [...new Map((importMatches || []).flatMap(match => {
+      const choice = match.choices.find(item => item.symbol === match.symbol);
+      return choice ? [[choice.symbol, { symbol: choice.symbol, name: choice.name, group: newGroup.trim() || "General" }] as const] : [];
+    })).values()];
+    if (!items.length) { setError("Choose at least one matched company before importing."); return; }
+    setBusy(true);
+    setError("");
+    try {
+      if (preview) setWatchlist(prev => [...prev.filter(item => !items.some(added => added.symbol === item.symbol)), ...items]);
+      else {
+        await request("/api/watchlist", { method: "POST", body: JSON.stringify({ items }) });
+        await loadWatchlist();
+      }
       setImportOpen(false);
       setImportText("");
-      setToast("Watchlist imported.");
+      setImportMatches(null);
+      setToast(`Imported ${items.length} ${items.length === 1 ? "company" : "companies"} to your watchlist${preview ? " (Preview)" : ""}.`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -313,11 +335,26 @@ export default function Terminal({ member, preview = false }: { member: Member; 
       <div className="page-heading"><div><div className="eyebrow">{view === "Dashboard" ? "YOUR DAILY PERSPECTIVE" : "SENGANTHAL RESEARCH"}</div><h1>{view === "Dashboard" ? "Market overview" : view}</h1><p>{subtitles[view]}</p></div></div>
       {error && <div role="alert" className="alert error">{error}<button className="icon-button" aria-label="Dismiss error" onClick={() => setError("")}><X size={16} /></button></div>}
 
-      {view === "Dashboard" && <Dashboard preview={preview} watchlist={watchlist} analyzed={analyzed} onAnalyze={symbol => void analyze(symbol)} exportAllowed={can(currentMember, "export")} analysisAllowed={can(currentMember, "analyze")} canScan={currentMember.role === "admin"} />}
+      {view === "Dashboard" && <Dashboard preview={preview} watchlist={watchlist} analyzed={analyzed} onAnalyze={symbol => void analyze(symbol)} exportAllowed={currentMember.active} analysisAllowed={can(currentMember, "analyze")} canScan={currentMember.role === "admin"} />}
       {view === "About Us" && <><AboutUs content={settings.about} />{can(currentMember, "aboutEdit") && settingsReady && <ContentEditor preview={preview} member={currentMember} settings={settings} onSettings={setSettings} onError={setError} />}</>}
       {view === "Stock Analyzer" && <><div className="analyser-search-title">Search a stock <span>Type at least 3 letters for company suggestions</span></div><form className="search-form standalone analyser-search" onSubmit={search}><Search size={20} /><input aria-label="Company name or symbol" placeholder="Company name or NSE / BSE symbol" value={query} onChange={e => setQuery(e.target.value)} required /><button className="button primary" disabled={busy}>Search</button></form>{matches.length > 0 && <section className="panel search-results stock-suggestion-list" aria-label="Matching companies">{matches.map(m => <button key={m.symbol} disabled={busy} onClick={() => void analyze(m.symbol)}><span><strong>{m.name}</strong><small>{m.symbol}</small></span><span>Analyze <ArrowRight size={15} /></span></button>)}</section>}{busy ? <Loading text="Retrieving company data and fundamentals..." /> : stock ? <StockAnalysis key={stock.symbol} stock={stock} preview={preview} watchlist={watchlist} group={newGroup} onGroup={setNewGroup} onAdd={() => void add(stock.symbol, stock.name)} onAnalyze={symbol => void analyze(symbol)} onFilings={() => currentMember.role === "admin" ? navigate("PDF Upload") : setToast("PDF Upload is available for administrators only.")} canSave={can(currentMember, "watchlist")} canExport={can(currentMember, "export")} /> : <Empty title="Start with a company" text="Search by name or symbol, then select the exact company to see sourced fundamentals." />}</>}
-      {view === "Watchlist" && <><div className="toolbar"><div className="input-icon"><Search size={17} /><input aria-label="Search watchlist" placeholder="Find a saved company..." value={watchQuery} onChange={e => setWatchQuery(e.target.value)} /></div><select aria-label="Filter group" value={group} onChange={e => setGroup(e.target.value)}>{["All groups", ...new Set(watchlist.map(i => i.group))].map(g => <option key={g}>{g}</option>)}</select><button className="button secondary" disabled={!can(currentMember, "watchlist")} onClick={() => setImportOpen(!importOpen)}><Plus size={16} />Bulk import</button><button className="button secondary" onClick={exportList} disabled={!watchlist.length || !can(currentMember, "export")}><Download size={16} />Export CSV</button></div>{importOpen && <section className="panel"><h2>Import stock symbols</h2><p className="muted">Paste up to 100 NSE symbols separated by commas or new lines. Use .BO for BSE.</p><label>Group<input value={newGroup} onChange={e => setNewGroup(e.target.value)} maxLength={50} /></label><label>Symbols<textarea value={importText} onChange={e => setImportText(e.target.value)} placeholder="TCS, RELIANCE, HDFCBANK" rows={4} /></label><button className="button primary" disabled={busy} onClick={() => void importItems()}>Import watchlist</button></section>}<section className="panel"><div className="panel-heading"><h2>Saved companies</h2><span className="count-badge">{visibleWatchlist.length} stocks</span></div>{visibleWatchlist.length ? <div className="table-wrap"><table><thead><tr><th>Company</th><th>Group</th><th>Research</th><th></th></tr></thead><tbody>{visibleWatchlist.map(i => <tr key={i.symbol}><td><strong>{i.symbol}</strong><small>{i.name}</small></td><td><span className="pill">{i.group}</span></td><td><button className="text-button" disabled={!can(currentMember, "analyze")} onClick={() => void analyze(i.symbol)}>Analyze <ArrowUpRight size={15} /></button></td><td><button className="icon-button" aria-label={"Remove " + i.symbol} disabled={!can(currentMember, "watchlist")} onClick={() => void remove(i.symbol)}><X size={16} /></button></td></tr>)}</tbody></table></div> : <Empty title="No saved companies here" text="Add a company from Stock Analyzer or import a list of symbols." />}</section></>}
-      {view === "News" && <><form className="search-form standalone" onSubmit={e => { e.preventDefault(); void loadNews(query || "India stock market", newsSource); }}><Search size={19} /><input aria-label="News search" placeholder="Search company or market news..." value={query} onChange={e => setQuery(e.target.value)} /><button className="button primary" disabled={newsBusy}>Search news</button></form><div className="tabs"><button className={newsTab==='market'?'selected':''} onClick={() => { setNewsTab('market'); setQuery(''); void loadNews("India stock market", "all"); }}>Indian markets</button><button className={newsTab==='orders'?'selected':''} onClick={() => { setNewsTab('orders'); setQuery('bags order contract win'); void loadNews("bags order contract win agreement India", "all"); }}>⚡ Order Wins / Contracts</button><button className={newsTab==='results'?'selected':''} onClick={() => { setNewsTab('results'); setQuery('quarterly results'); void loadNews("India company quarterly results", "all"); }}>Company results</button><button className={newsTab==='moneycontrol'?'selected':''} onClick={() => { setNewsTab('moneycontrol'); void loadNews("India stock market", "moneycontrol"); }}>Moneycontrol</button><button className={newsTab==='global'?'selected':''} onClick={() => { setNewsTab('global'); void loadNews("US global stock market", "google"); }}>Global markets</button></div>{newsBusy ? <Loading text="Loading market news..." /> : <div className="news-grid">{news.map((n, i) => <a className="panel news-card" href={n.url} target="_blank" rel="noreferrer" key={n.url + i}><span className="eyebrow">{n.source}</span><h2>{n.title}</h2><div className="news-bottom"><span className="small muted">{preview ? "Sample article" : relativeTime(n.publishedAt)}</span><ArrowUpRight size={19} /></div></a>)}</div>}{!news.length && !newsBusy && <Empty title="No news found" text="Try a company name or a broader search." />}</>}
+      {view === "Watchlist" && <>
+        <div className="toolbar"><div className="input-icon"><Search size={17} /><input aria-label="Search watchlist" placeholder="Find a saved company..." value={watchQuery} onChange={e => setWatchQuery(e.target.value)} /></div><select aria-label="Filter group" value={group} onChange={e => setGroup(e.target.value)}>{["All groups", ...new Set(watchlist.map(i => i.group))].map(g => <option key={g}>{g}</option>)}</select><button className="button secondary" disabled={!can(currentMember, "watchlist")} onClick={() => setImportOpen(!importOpen)}><Plus size={16} />Bulk import</button><button className="button secondary" onClick={exportList} disabled={!watchlist.length || !can(currentMember, "export")}><Download size={16} />Export CSV</button></div>
+        {importOpen && <section className="panel watchlist-import">
+          <h2>Bulk import companies</h2>
+          <p className="muted">Enter up to 100 company names or symbols. Separate entries with commas or new lines.</p>
+          <label>Group<input value={newGroup} onChange={e => setNewGroup(e.target.value)} maxLength={50} /></label>
+          <label>Companies or symbols<textarea value={importText} onChange={e => { setImportText(e.target.value); setImportMatches(null); }} placeholder="Netweb Technologies, E2E Networks" rows={4} /></label>
+          <button className="button primary" disabled={busy || !importText.trim()} onClick={() => void reviewImport()}><Search size={16} />Review matches</button>
+          {importMatches && <div className="watchlist-import-review">
+            <h3>Review company matches</h3>
+            <div className="table-wrap"><table className="import-match-table"><thead><tr><th>Entered</th><th>Company and symbol</th></tr></thead><tbody>{importMatches.map((match, index) => <tr key={match.input + index}><td>{match.input}</td><td>{match.choices.length ? <select aria-label={"Company match for " + match.input} value={match.symbol} onChange={e => setImportMatches(rows => rows?.map((row, i) => i === index ? { ...row, symbol: e.target.value } : row) || null)}><option value="">Skip this entry</option>{match.choices.map(choice => <option key={choice.symbol} value={choice.symbol}>{choice.name} ({choice.symbol})</option>)}</select> : <span className="muted">No verified match. Check the spelling.</span>}</td></tr>)}</tbody></table></div>
+            <button className="button primary" disabled={busy || !importMatches.some(match => match.symbol)} onClick={() => void importItems()}><Plus size={16} />Import {new Set(importMatches.map(match => match.symbol).filter(Boolean)).size} companies</button>
+          </div>}
+        </section>}
+        <section className="panel watchlist-saved"><div className="panel-heading"><h2>Saved companies</h2><span className="count-badge">{visibleWatchlist.length} stocks</span></div>{visibleWatchlist.length ? <div className="table-wrap"><table className="watchlist-table"><thead><tr><th>Company</th><th>Group</th><th>Research</th><th></th></tr></thead><tbody>{visibleWatchlist.map(i => <tr key={i.symbol}><td className="watchlist-company"><strong>{i.name}</strong><small>{i.symbol}</small></td><td className="watchlist-group"><span className="pill">{i.group}</span></td><td className="watchlist-research"><button className="text-button" disabled={!can(currentMember, "analyze")} onClick={() => void analyze(i.symbol)}>Analyze <ArrowUpRight size={15} /></button></td><td className="watchlist-remove"><button className="icon-button" aria-label={"Remove " + i.symbol} disabled={!can(currentMember, "watchlist")} onClick={() => void remove(i.symbol)}><X size={16} /></button></td></tr>)}</tbody></table></div> : <Empty title="No saved companies here" text="Add a company from Stock Analyzer or import a list of symbols." />}</section>
+      </>}
+      {view === "News" && <><form className="search-form standalone" onSubmit={e => { e.preventDefault(); void loadNews(query || "India stock market", newsSource); }}><Search size={19} /><input aria-label="News search" placeholder="Search company or market news..." value={query} onChange={e => setQuery(e.target.value)} /><button className="button primary" disabled={newsBusy}>Search news</button></form><div className="tabs"><button className={newsTab==='market'?'selected':''} onClick={() => { setNewsTab('market'); setQuery(''); void loadNews("India stock market", "all"); }}>Indian markets</button><button className={newsTab==='orders'?'selected':''} onClick={() => { setNewsTab('orders'); setQuery('bags order contract win'); void loadNews("bags order contract win agreement India", "all"); }}>⚡ Order Wins / Contracts</button><button className={newsTab==='results'?'selected':''} onClick={() => { setNewsTab('results'); setQuery('quarterly results'); void loadNews("India company quarterly results", "all"); }}>Company results</button><button className={newsTab==='moneycontrol'?'selected':''} onClick={() => { setNewsTab('moneycontrol'); void loadNews("India stock market", "moneycontrol"); }}>Moneycontrol</button><button className={newsTab==='global'?'selected':''} onClick={() => { setNewsTab('global'); void loadNews("US global stock market", "google"); }}>Global markets</button></div>{newsBusy ? <Loading text="Loading market news..." /> : <div className="news-grid">{news.map((n, i) => <a className="panel news-card" href={n.url} target="_blank" rel="noreferrer" key={n.url + i}>{n.imageUrl && <img className="news-card-image" src={n.imageUrl} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = "none"; }} />}<span className="eyebrow">{n.source}</span><h2>{n.title}</h2><div className="news-bottom"><span className="small muted">{preview ? "Sample article" : relativeTime(n.publishedAt)}</span><ArrowUpRight size={19} /></div></a>)}</div>}{!news.length && !newsBusy && <Empty title="No news found" text="Try a company name or a broader search." />}</>}
       {view === "Team Chat" && <ChatPanel preview={preview} canPost={can(currentMember, "chat")} onError={setError} />}
       {view === "Admin" && currentMember.role === "admin" && (settingsReady ? <Administration preview={preview} member={currentMember} settings={settings} onSettings={setSettings} onError={setError} /> : <Loading />)}
       {view === "PDF Upload" && currentMember.role === "admin" && <ReportsPanel preview={preview} initialSymbol={stock?.symbol || ""} onError={setError} />}
