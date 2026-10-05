@@ -5,6 +5,7 @@ import type { Candle, Metric, Quote, Stock } from "./types";
 import { cached } from "./request-cache";
 import { fetchUpstream, upstreamJson, UpstreamError } from "./upstream";
 export { cached } from "./request-cache";
+import { nseQuote, nseSearch, canUseNse } from "./nse-market";
 
 const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"], fetch: (input, init) => fetchUpstream("Yahoo Finance", input, init) });
 const INR = "\u20b9";
@@ -136,20 +137,21 @@ function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false, shares:
 export async function quotes(symbols: string[]): Promise<Quote[]> {
   return cached("quotes:" + symbols.join(","), async () => {
     const requested = symbols.map(ticker);
-    const normalize = (q: Awaited<ReturnType<typeof yahoo.quote>>) => ({ symbol: String(q.symbol).replace(/\.NS$/, ""), name: q.shortName || q.longName || q.symbol, price: finite(q.regularMarketPrice), change: finite(q.regularMarketChange), changePercent: finite(q.regularMarketChangePercent), currency: q.currency || "INR", asOf: iso(q.regularMarketTime) });
+    const normalize = (q: Awaited<ReturnType<typeof yahoo.quote>>) => ({ symbol: String(q.symbol).replace(/\.NS$/, ""), name: q.shortName || q.longName || q.symbol, price: finite(q.regularMarketPrice), change: finite(q.regularMarketChange), changePercent: finite(q.regularMarketChangePercent), currency: q.currency || "INR", asOf: iso(q.regularMarketTime), source: "Yahoo Finance" as const });
     try {
       const result = await yahoo.quote(requested);
       return (Array.isArray(result) ? result : [result]).map(normalize);
     } catch (error) {
-      // A provider outage affects the batch too; do not fan it out into more requests.
-      if (error instanceof UpstreamError || requested.length === 1) throw error;
-      const settled = await Promise.allSettled(requested.map(symbol => yahoo.quote(symbol)));
+      // Exchange data keeps NSE stocks usable when Yahoo rejects the hosting IP.
+      // Never substitute an NSE listing for an index or a BSE-only symbol.
+      const settled = await Promise.allSettled(symbols.map(async symbol => {
+        if (canUseNse(symbol)) return nseQuote(symbol);
+        if (error instanceof UpstreamError || requested.length === 1) throw error;
+        return normalize(await yahoo.quote(ticker(symbol)));
+      }));
       const rows = settled.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
-      if (!rows.length) {
-        const failure = settled.find(result => result.status === "rejected");
-        throw failure?.reason || new UpstreamError("Yahoo Finance", "invalid_response");
-      }
-      return rows.map(normalize);
+      if (!rows.length) throw settled.find(result => result.status === "rejected")?.reason || error;
+      return rows;
     }
   });
 }
@@ -157,6 +159,7 @@ export async function quotes(symbols: string[]): Promise<Quote[]> {
 export async function search(query: string) {
   query = query.trim().toUpperCase();
   return cached("search:" + query, async () => {
+    try {
     const result = await yahoo.search(query, { quotesCount: 20, newsCount: 0 });
     const rows = result.quotes
       .filter(q => "symbol" in q && typeof q.symbol === "string" && /\.(NS|BO)$/.test(q.symbol))
@@ -173,6 +176,7 @@ export async function search(query: string) {
       seen.add(key);
       return true;
     }).slice(0, 10);
+    } catch { return nseSearch(query); }
   }, 3600000);
 }
 
@@ -306,9 +310,14 @@ export async function analyze(symbol: string): Promise<Stock> {
         ...(annualResult.status === "rejected" ? ["Annual fundamentals fallback could not be loaded."] : []),
         ...(holdingResult.status === "rejected" ? ["Exchange shareholding could not be loaded; promoter holding may fall back to provider data."] : []),
         ...(historyResult.status === "rejected" ? ["Price history is unavailable."] : []),
-        "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
+        q.source === "NSE"
+          ? "Yahoo Finance is unavailable. The quote comes from NSE; unavailable fundamentals and history are left blank. Verify exchange timestamps and company filings."
+          : "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
         "The fundamental score is a transparent checklist, not a buy, hold or sell recommendation."
       ]
     };
   }, 300000);
 }
+
+/** Check Yahoo directly so an NSE fallback does not hide a provider outage. */
+export async function yahooHealthCheck() { await yahoo.quote("TCS.NS"); }

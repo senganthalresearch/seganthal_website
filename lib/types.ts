@@ -1,5 +1,5 @@
 export type Member = { email: string; name?: string; role: "admin" | "full" | "standard" | "viewer" | "member"; active: boolean; permissions?: Partial<Record<"analyze" | "watchlist" | "chat" | "reports" | "swing" | "export" | "aboutEdit", boolean>>; joinedAt?: string };
-export type Quote = { symbol: string; name: string; price: number | null; change: number | null; changePercent: number | null; currency: string; asOf: string | null };
+export type Quote = { symbol: string; name: string; price: number | null; change: number | null; changePercent: number | null; currency: string; asOf: string | null; source?: "Yahoo Finance" | "NSE" };
 export type Candle = { date: string; close: number; volume: number; high?: number; low?: number };
 export type Metric = { key: string; label: string; value: number | null; unit: string; source: string; period?: string; good?: boolean };
 export type FinancialStatementRow = { period: string; revenue: number | null; operatingProfit: number | null; opm: number | null; netProfit: number | null; npm: number | null; eps: number | null };

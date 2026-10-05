@@ -269,7 +269,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
           <strong>{money(stock.price)}</strong>
           <Change value={stock.changePercent} />
         </div>
-        <small>Quote as of {stock.asOf ? new Date(stock.asOf).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST" : "unavailable"}</small>
+        <small>{stock.source || "Yahoo Finance"} quote as of {stock.asOf ? new Date(stock.asOf).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST" : "unavailable"}</small>
       </div>
       <div className="analyser-score">
         <span>FUNDAMENTAL SCORE</span>
@@ -306,7 +306,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
       <div className="analyser-metrics">{metrics(["revenueGrowth", "patGrowth", "epsGrowth", "roe", "roce", "opm", "npm", "de", "interestCoverage", "currentRatio", "fcf", "ocfPat", "promoterHolding"]).map(m => <MetricCard key={m.key} metric={m} scoreContext />)}</div>
     </Section>
 
-    <Section title="Key metrics" note={preview ? "Illustrative sample - not added again to score" : "Source: Yahoo Finance + exchange filings - context only"}>
+    <Section title="Key metrics" note={preview ? "Illustrative sample - not added again to score" : "Source: provider data + exchange filings - context only"}>
       <div className="analyser-metrics">{metrics(["pe", "pb", "peg", "eps", "bookValue", "yield", "earningsGrowth"]).map(m => <MetricCard key={m.key} metric={m} />)}</div>
     </Section>
 

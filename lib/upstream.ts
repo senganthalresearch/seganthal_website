@@ -1,4 +1,4 @@
-export type Provider = "NSE" | "Yahoo Finance";
+export type Provider = "NSE" | "Yahoo Finance" | "BSE";
 export type FailureReason = "timeout" | "network" | "http" | "invalid_response";
 export class UpstreamError extends Error {
   constructor(public provider: Provider, public reason: FailureReason, public upstreamStatus?: number, options?: ErrorOptions) {
@@ -22,7 +22,7 @@ export async function fetchUpstream(provider: Provider, input: string | URL | Re
         await response.body?.cancel();
       } else {
         // Preserve redirects and other statuses for Yahoo's cookie/auth handling.
-        if (response.status === 429 || response.status >= 500) {
+        if (response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500) {
           await response.body?.cancel();
           throw new UpstreamError(provider, "http", response.status);
         }
