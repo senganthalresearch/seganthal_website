@@ -2,23 +2,17 @@ import YahooFinance from "yahoo-finance2";
 import { finite, percentFraction, qualityScore } from "./analytics";
 import type { Candle, Metric, Quote, Stock } from "./types";
 
-const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+import { cached } from "./request-cache";
+import { fetchUpstream, upstreamJson, UpstreamError } from "./upstream";
+export { cached } from "./request-cache";
+
+const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"], fetch: (input, init) => fetchUpstream("Yahoo Finance", input, init) });
 const INR = "\u20b9";
 const MULTIPLE = "\u00d7";
 
 export const universe = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC", "LT", "SBIN", "BHARTIARTL", "HINDUNILVR", "AXISBANK", "KOTAKBANK", "MARUTI", "SUNPHARMA", "TITAN", "BAJFINANCE", "ASIANPAINT", "HCLTECH", "WIPRO", "TATASTEEL"];
 export const indices = ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT"];
 export function ticker(symbol: string) { return symbol.startsWith("^") || symbol.endsWith(".NS") || symbol.endsWith(".BO") ? symbol : symbol + ".NS"; }
-
-const cache = new Map<string, { data: unknown; expires: number }>();
-export async function cached<T>(key: string, fetcher: () => Promise<T>, ttl = 60000): Promise<T> {
-  const hit = cache.get(key);
-  if (hit && hit.expires > Date.now()) return hit.data as T;
-  const data = await fetcher();
-  if (cache.size > 300) cache.delete(cache.keys().next().value!);
-  cache.set(key, { data, expires: Date.now() + ttl });
-  return data;
-}
 
 function iso(value: unknown) { if (!value) return null; const d = value instanceof Date ? value : new Date(String(value)); return Number.isFinite(d.getTime()) ? d.toISOString() : null; }
 type FundamentalRow = Record<string, unknown> & { date?: Date | number | string };
@@ -51,9 +45,7 @@ async function nseHoldingSummary(symbol: string): Promise<HoldingSummary | null>
     const clean = symbol.replace(/\.NS$/, "");
     const headers = { Accept: "application/json", "User-Agent": "Mozilla/5.0", Referer: "https://www.nseindia.com/companies-listing/corporate-filings-shareholding-pattern" };
     const masterUrl = "https://www.nseindia.com/api/corporate-share-holdings-master?index=equities&symbol=" + encodeURIComponent(clean);
-    const response = await fetch(masterUrl, { headers, signal: AbortSignal.timeout(12000) });
-    if (!response.ok) throw new Error("NSE shareholding unavailable");
-    const reports = await response.json() as FundamentalRow[];
+    const reports = await upstreamJson<FundamentalRow[]>("NSE", masterUrl, { headers });
     const latest = Array.isArray(reports) ? reports[0] : undefined;
     if (!latest) return null;
     let promoterPledge: number | null = null;
@@ -148,16 +140,22 @@ export async function quotes(symbols: string[]): Promise<Quote[]> {
     try {
       const result = await yahoo.quote(requested);
       return (Array.isArray(result) ? result : [result]).map(normalize);
-    } catch {
+    } catch (error) {
+      // A provider outage affects the batch too; do not fan it out into more requests.
+      if (error instanceof UpstreamError || requested.length === 1) throw error;
       const settled = await Promise.allSettled(requested.map(symbol => yahoo.quote(symbol)));
       const rows = settled.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
-      if (!rows.length) throw new Error("Quote unavailable");
+      if (!rows.length) {
+        const failure = settled.find(result => result.status === "rejected");
+        throw failure?.reason || new UpstreamError("Yahoo Finance", "invalid_response");
+      }
       return rows.map(normalize);
     }
   });
 }
 
 export async function search(query: string) {
+  query = query.trim().toUpperCase();
   return cached("search:" + query, async () => {
     const result = await yahoo.search(query, { quotesCount: 20, newsCount: 0 });
     const rows = result.quotes
@@ -198,7 +196,8 @@ export async function analyze(symbol: string): Promise<Stock> {
       nseHoldingSummary(symbol)
     ]);
 
-    if (quoteResult.status !== "fulfilled" || !quoteResult.value[0]) throw new Error("Quote unavailable");
+    if (quoteResult.status === "rejected") throw quoteResult.reason;
+    if (!quoteResult.value[0]) throw new UpstreamError("Yahoo Finance", "invalid_response");
 
     const q = quoteResult.value[0];
     const s = summaryResult.status === "fulfilled" ? summaryResult.value : null;

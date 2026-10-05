@@ -3,8 +3,9 @@ import {db} from '@/lib/db';
 import {analyze,history,quotes} from '@/lib/market';
 import {flows} from '@/lib/dashboard-data';
 import {z} from 'zod';
+import {serviceFailure} from '@/lib/upstream';
 export const maxDuration=60;
-async function check(name:string,fn:()=>Promise<unknown>){const start=Date.now();try{await fn();return {name,status:'ok',detail:'Reachable',duration:Date.now()-start}}catch{return {name,status:'error',detail:'Unavailable; retry or review the service configuration.',duration:Date.now()-start}}}
+async function check(name:string,fn:()=>Promise<unknown>){const start=Date.now();try{await fn();return {name,status:'ok',detail:'Reachable',duration:Date.now()-start}}catch(error){return {name,status:'error',detail:serviceFailure(error).message,duration:Date.now()-start}}}
 async function bseQuoteCheck(){
  const response=await fetch('https://api.bseindia.com/BseIndiaAPI/api/GetStkCurrMain/w?flag=Equity&scripcode=500325',{headers:{Accept:'application/json,text/plain,*/*',Referer:'https://www.bseindia.com/','User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(10000)});
  if(!response.ok)throw new Error('BSE quote API unavailable');
