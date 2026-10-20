@@ -25,6 +25,10 @@ export const DELETE=api(async request=>{
  const activeSubscription=await database.collection('subscriptions').find({email}).sort({createdAt:-1}).limit(1).toArray();
  if(activeSubscription[0]&&['active','authenticated','created','pending','halted'].includes(activeSubscription[0].status))throw new HttpError(409,'Cancel the member subscription before deleting the account.');
  const result=await database.collection('members').deleteOne({email});
+ if(result.deletedCount){
+  for(const name of ['phoneCredentials','users','presence','messages'])await database.collection(name).deleteMany({email});
+  for(const name of ['preferences','portfolio','visits','watchlist','transactions','ledgers','stakeScans','reports'])await database.collection(name).deleteMany({owner:email});
+ }
  await database.collection('audit').insertOne({action:'member.delete',actor:admin.email,target:email,deletedCount:result.deletedCount,createdAt:new Date()});
  return {ok:true,deletedCount:result.deletedCount};
 });

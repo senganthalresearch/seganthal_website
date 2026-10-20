@@ -50,6 +50,8 @@ try {
     const byEmail = ["users", "presence", "messages", "phoneCredentials", "subscriptions"];
     const byOwner = ["preferences", "portfolio", "visits", "watchlist", "transactions", "ledgers", "stakeScans", "reports"];
     for (const name of byEmail) if (collections.includes(name)) results[name] = (await database.collection(name).deleteMany({ email: { $nin: adminEmails } })).deletedCount;
+    const removedSubscriptions = (backup.documents.subscriptions || []).filter(value => removedEmails.includes(value.email)).map(value => value.subscriptionId).filter(Boolean);
+    if (collections.includes("paymentEvents") && removedSubscriptions.length) results.paymentEvents = (await database.collection("paymentEvents").deleteMany({ subscriptionId: { $in: removedSubscriptions } })).deletedCount;
     for (const name of byOwner) if (collections.includes(name)) results[name] = (await database.collection(name).deleteMany({ owner: { $nin: adminEmails } })).deletedCount;
     if (collections.includes("audit")) results.audit = (await database.collection("audit").deleteMany({ $or: [{ actor: { $exists: true, $nin: adminEmails } }, { target: { $exists: true, $nin: adminEmails } }] })).deletedCount;
     if (collections.includes("rateLimits")) results.rateLimits = (await database.collection("rateLimits").deleteMany({})).deletedCount;

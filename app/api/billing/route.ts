@@ -19,9 +19,12 @@ export const POST = api(async request => {
   const planId = await verifyAnnualPlan();
   const database = await db();
   const existing = await database.collection<{email:string;subscriptionId:string;status:string}>("subscriptions").find({ email: account.email }).sort({ createdAt: -1 }).limit(1).toArray();
-  if (existing[0] && ["created", "authenticated", "active", "pending", "halted"].includes(existing[0].status)) {
-    if (existing[0].status === "active" || existing[0].status === "authenticated") throw new HttpError(409, "A subscription is already set up. Refresh your access status or contact support.");
-    if (existing[0].status === "created") return { subscriptionId: existing[0].subscriptionId, keyId: process.env.RAZORPAY_KEY_ID, amount: annualPricePaise, currency: "INR" };
+  if (existing[0]) {
+    const latest = await razorpay<{id:string;status:string;plan_id:string}>(`subscriptions/${encodeURIComponent(existing[0].subscriptionId)}`);
+    if (latest.id !== existing[0].subscriptionId || latest.plan_id !== planId) throw new HttpError(502, "Could not confirm the existing subscription.");
+    if (latest.status === "created") return { subscriptionId: existing[0].subscriptionId, keyId: process.env.RAZORPAY_KEY_ID, amount: annualPricePaise, currency: "INR" };
+    await database.collection("subscriptions").updateOne({ subscriptionId: existing[0].subscriptionId }, { $set: { status: latest.status, updatedAt: new Date().toISOString() } });
+    if (!["cancelled", "expired", "completed"].includes(latest.status)) throw new HttpError(409, "A subscription already exists. Refresh its status or contact support before starting another.");
   }
   const created = await razorpay<{id:string;status:string;plan_id:string}>("subscriptions", { method: "POST", body: JSON.stringify({ plan_id: planId, total_count: 30, quantity: 1, customer_notify: 1, notes: { member: account.email } }) });
   if (!/^sub_[a-zA-Z0-9]+$/.test(created.id) || created.plan_id !== planId) throw new HttpError(502, "The payment provider returned an invalid subscription.");
