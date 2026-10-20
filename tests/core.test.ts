@@ -7,6 +7,17 @@ import type { Candle, Metric } from '../lib/types';
 import { parseWatchlistEntries } from '../lib/watchlist-import';
 import { chatImageSchema, decodeChatImage } from '../lib/chat-image';
 import { newsImage } from '../lib/news-image';
+import { indiaDay, isFreshOrderNews } from '../lib/order-news';
+
+test('order wins only include today and yesterday in India time', () => {
+  const now = Date.parse('2026-09-27T18:40:00Z'); // 28 Sep, 00:10 IST
+  assert.equal(indiaDay(now), '2026-09-28');
+  assert.equal(isFreshOrderNews({ title: 'BHEL bags new order', publishedAt: '2026-09-26T18:45:00Z' }, now), true);
+  assert.equal(isFreshOrderNews({ title: 'L&T secures contract', publishedAt: '2026-09-27T18:35:00Z' }, now), true);
+  assert.equal(isFreshOrderNews({ title: 'BHEL bags new order', publishedAt: '2026-09-26T18:29:00Z' }, now), false);
+  assert.equal(isFreshOrderNews({ title: 'Court orders company to pay tax', publishedAt: '2026-09-27T18:35:00Z' }, now), false);
+  assert.equal(isFreshOrderNews({ title: 'BHEL bags new order', publishedAt: null }, now), false);
+});
 
 test('chat images accept supported image signatures within the size limit', () => {
   const png = { mimeType: 'image/png' as const, data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aGQAAAABJRU5ErkJggg==' };

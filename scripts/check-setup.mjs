@@ -7,9 +7,7 @@ for (const key of required) {
   console.log(`${present ? 'OK' : 'MISSING'} ${key}`);
   if (!present) failed = true;
 }
-console.log(process.env.ANTHROPIC_API_KEY?.trim() && process.env.ANTHROPIC_MODEL?.trim()
-  ? 'OK PDF extraction configuration present (provider not contacted)'
-  : 'OPTIONAL PDF extraction unavailable; manual filing entry is available');
+console.log('OK PDF extraction runs locally in the browser; no paid provider required');
 if (process.env.NEXTAUTH_URL) {
   try {
     const url = new URL(process.env.NEXTAUTH_URL);

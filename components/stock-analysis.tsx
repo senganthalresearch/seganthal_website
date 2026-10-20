@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ArrowUpRight, BarChart3, BookOpen, Check, Download, FileText, RefreshCw, Star, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
 import { scorePoints, scoreRules } from "@/lib/analytics";
 import type { Metric, Stock, WatchItem, FinancialStatementRow } from "@/lib/types";
+import { CompanyLogo } from "./company-logo";
 import { Change, metricValue, money, number, Notice, request } from "./ui";
 
 type Props = { stock: Stock; preview: boolean; watchlist: WatchItem[]; group: string; onGroup: (value: string) => void; onAdd: () => void; onAnalyze: (symbol: string) => void; onFilings: () => void; canSave: boolean; canExport: boolean };
@@ -263,7 +264,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
     <section className="analyser-company">
       <div>
         <span className="eyebrow">{stock.symbol} &middot; {stock.sector}</span>
-        <h2>{stock.name}</h2>
+        <h2 className="company-report-name"><CompanyLogo symbol={stock.symbol} name={stock.name} size={48}/>{stock.name}</h2>
         <p>{stock.industry}</p>
         <div className="quote-line">
           <strong>{money(stock.price)}</strong>
@@ -400,7 +401,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
         {/* Clear Key Fundamental Strengths */}
         {strengths.length > 0 && (
           <article className="analyser-insight pass">
-            <h3>🌟 Key Fundamental Strengths (Passed Score Factors)</h3>
+            <h3><ShieldCheck size={16} /> Key Fundamental Strengths (Passed Score Factors)</h3>
             <ul className="takeaways-list">
               {strengths.map(m => {
                 const pts = scorePoints(m);
@@ -417,7 +418,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
         {/* Key Attention Areas */}
         {reviewItems.length > 0 && (
           <article className="analyser-insight review">
-            <h3>⚠️ Risk Factors & Attention Areas (Below Benchmark)</h3>
+            <h3><AlertTriangle size={16} /> Risk Factors & Attention Areas (Below Benchmark)</h3>
             <ul className="takeaways-list">
               {reviewItems.map(m => {
                 const pts = scorePoints(m);
@@ -434,7 +435,7 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
         {/* Missing / Excluded Items */}
         {missingItems.length > 0 && (
           <article className="analyser-insight summary">
-            <h3>ℹ️ Excluded / Unreported Checklist Items</h3>
+            <h3>Excluded / Unreported Checklist Items</h3>
             <p className="small muted">
               The following metrics were not published or unavailable from exchange filings and are omitted from score calculation: {missingItems.map(m => m.label).join(", ")}.
             </p>

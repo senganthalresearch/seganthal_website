@@ -42,7 +42,7 @@ npm.cmd start
 
 Tests compile into the ignored `.test-build` directory and use Node's test runner. They cover access rules, real calendar dates, input validation, missing financial data, EMA/RSI calculations, cross/volume detection and CSV escaping.
 
-Production requires a Node server or compatible Next.js host, not static file hosting. Set `NEXTAUTH_URL` to the deployed origin, configure the matching Google callback, and provide production environment variables. `vercel.json` is included, but its presence does not mean a deployment exists. Sample preview returns 404 in production.
+Production requires a Node server or compatible Next.js host, not static file hosting. Set `NEXTAUTH_URL` to the deployed origin, configure the matching Google callback, and provide production environment variables. `vercel.json` is included, but its presence does not mean a deployment exists. Sample preview returns 404 in production unless `SHARE_DEMO=true` is set for an isolated, credential-free viewing instance; do not enable that flag on the live member site.
 
 On first database use, indexes are created for unique watchlist entries, unique filings per owner/symbol/period, unique member emails, recent messages, and expiry of rate-limit counters. If an older database contains duplicate filings, resolve those records with the owner before creating the unique index; the app does not delete research records automatically.
 

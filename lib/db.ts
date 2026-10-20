@@ -26,9 +26,14 @@ const localFallbackEnabled = process.env.MONGODB_LOCAL_FALLBACK === "true" || (p
 
 async function ensureIndexes(database: Db) {
   await Promise.all([
+    database.collection("preferences").createIndex({owner:1,key:1},{unique:true}),
+    database.collection("visits").createIndex({owner:1,symbol:1},{unique:true}),
+    database.collection("transactions").createIndex({owner:1,id:1},{unique:true}),
+    database.collection("ledgers").createIndex({owner:1},{unique:true}),
     database.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     database.collection("reports").createIndex({ owner: 1, symbol: 1, period: 1 }, { unique: true }),
     database.collection("watchlist").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
+    database.collection("portfolio").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("members").createIndex({ email: 1 }, { unique: true }),
     database.collection("messages").createIndex({ createdAt: -1 }),
     database.collection("settings").createIndex({ key: 1 }, { unique: true }),

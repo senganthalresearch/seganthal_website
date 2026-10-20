@@ -1,204 +1,38 @@
 "use client";
 import { signIn } from "next-auth/react";
-import {
-  ArrowUpRight,
-  ShieldCheck,
-  BookOpen,
-  Sparkles,
-  Phone,
-  MessageCircle,
-  TrendingUp,
-  Layers,
-  Award,
-  CheckCircle2,
-  ExternalLink
-} from "lucide-react";
-import { useState } from "react";
-
-const topics = [
-  "Read balance sheets and cash flow with confidence",
-  "Understand financial ratios and business quality",
-  "Explore growth opportunities and long-term potential",
-  "Build a framework for valuation and risk",
-  "Learn moving averages, RSI, MACD and chart essentials",
-  "Revisit lessons with class recordings"
-];
-
-const whatsapp =
-  "https://wa.me/919025839615?text=Hello%2C%20I%20would%20like%20details%20about%20the%20Senganthal%20fundamental%20analysis%20classes.";
-
-export default function Login({
-  configured,
-  error,
-  previewAvailable
-}: {
-  configured: boolean;
-  error?: string;
-  previewAvailable: boolean;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [signInError, setSignInError] = useState("");
-
-  return (
-    <main className="anniversary-login">
-      {/* Sleek Navigation Bar */}
-      <header className="anniversary-header">
-        <a href="/login" className="anniversary-brand">
-          <img
-            src="/senganthal-logo-transparent.png"
-            alt="Senganthal Research Logo"
-            className="anniversary-brand-img"
-          />
-          <div className="anniversary-brand-text">
-            <span className="anniversary-brand-title">செங்காந்தள்™ முதலீட்டுக் குடும்பம்</span>
-            <span className="anniversary-brand-sub">RESEARCH & COMMUNITY</span>
-          </div>
-        </a>
-
-        <div className="anniversary-header-meta">
-          <div className="anniversary-anniv-tag">
-            <Award size={13} />
-            <span>1st Anniversary • Growing Together</span>
-          </div>
-
-          <div className="anniversary-header-actions">
-            <a
-              href="tel:+919025839615"
-              className="anniversary-header-link"
-              title="Call Senganthal"
-            >
-              <Phone size={13} />
-              <span>+91 90258 39615</span>
-            </a>
-            <a
-              href={whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="anniversary-header-link highlight"
-              title="WhatsApp Community Support"
-            >
-              <MessageCircle size={13} />
-              <span>WhatsApp</span>
-            </a>
-          </div>
-        </div>
-      </header>
-
-      {/* Main 2-Column Space-Optimized Grid */}
-      <div className="anniversary-content-grid">
-        {/* Left Hero & Capabilities */}
-        <section className="anniversary-hero-col">
-          {/* Celebratory 1st Anniversary Hero Badge with Orbit & Typography */}
-          <div className="anniversary-celebration-hero">
-            <div className="anniversary-medallion-badge" aria-label="Celebrating our 1st Anniversary">
-              <div className="anniversary-orbit-ring" aria-hidden="true" />
-              <div className="anniversary-orbit-glow" aria-hidden="true" />
-              <Sparkles className="anniversary-sparkle spark-one" aria-hidden="true" />
-              <Sparkles className="anniversary-sparkle spark-two" aria-hidden="true" />
-              <span className="anniversary-one-num">1<sup>st</sup></span>
-              <span className="anniversary-anniv-label">ANNIVERSARY</span>
-              <span className="anniversary-anniv-milestone">GROWING TOGETHER</span>
-            </div>
-
-            <div className="anniversary-hero-headline-wrap">
-              <div className="anniversary-kicker-badge">
-                <span className="anniversary-kicker-dot" />
-                <span lang="ta">MILESTONE YEAR - முதலீடு முதல் இடு</span>
-              </div>
-              <h1 className="anniversary-headline-text">
-                A year of learning.
-                <br />
-                <span className="anniversary-gold-text">A community growing together.</span>
-              </h1>
-              <div className="anniversary-tamil-slogan">
-                <Sparkles size={14} />
-                <span>Tamil Nadu&apos;s Institutional Stock Research & Learning Platform</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="anniversary-lead">
-            Empowering serious investors and learners with institutional-grade balance sheet
-            analytics, Peter Lynch & Graham valuation frameworks, and real-time exchange filing scans.
-          </p>
-
-          {/* 4 Pillars in Compact 2x2 Layout */}
-          <div className="anniversary-pillars">
-            <div className="pillar-card">
-              <div className="pillar-icon">
-                <BookOpen size={16} />
-              </div>
-              <div className="pillar-body">
-                <strong>Fundamental Depth</strong>
-                <p>Balance sheets, debt serviceability, cash flow health & margin trends.</p>
-              </div>
-            </div>
-
-            <div className="pillar-card">
-              <div className="pillar-icon gold">
-                <Sparkles size={16} />
-              </div>
-              <div className="pillar-body">
-                <strong>Valuation Frameworks</strong>
-                <p>Peter Lynch fair value, Graham Number & intrinsic DCF benchmarks.</p>
-              </div>
-            </div>
-
-            <div className="pillar-card">
-              <div className="pillar-icon">
-                <TrendingUp size={16} />
-              </div>
-              <div className="pillar-body">
-                <strong>Swing Catalyst Timing</strong>
-                <p>50 & 200 DMA trendlines, RSI momentum & volume breakout detection.</p>
-              </div>
-            </div>
-
-            <div className="pillar-card">
-              <div className="pillar-icon gold">
-                <Layers size={16} />
-              </div>
-              <div className="pillar-body">
-                <strong>Institutional Pulse</strong>
-                <p>Quarterly FII & DII stake shifts, bulk/block deals & SME migrations.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Curriculum Highlights Bar */}
-          <div className="anniversary-curriculum-strip">
-            <span className="strip-label">CORE CURRICULUM:</span>
-            <span className="strip-pill">Balance Sheets</span>
-            <span className="strip-pill">Financial Ratios</span>
-            <span className="strip-pill">Valuation & Risk</span>
-            <span className="strip-pill">DMA / RSI Charts</span>
-            <span className="strip-pill">Recorded Lessons</span>
-            <a
-              href={whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="strip-link"
-            >
-              Ask about classes & fees <ArrowUpRight size={13} />
-            </a>
-          </div>
-        </section>
-
-        {/* Right Access Station Column */}
-        <aside className="anniversary-access-column">
-          {/* Main Terminal Access Card */}
-          <section className="login-terminal-card">
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, ArrowRight, ChevronDown, Phone, MessageCircle, ShieldCheck, Sparkles, Search, X, CheckCircle2 } from "lucide-react";
+import { ThemeToggle } from "./theme";
+import { ResearchIcon, ResearchIllustration, PatternDrawing } from "./research-art";
+import { HomeAnnouncement } from "./home-announcement";
+import type { AnnouncementContent } from "@/lib/site-settings";
+const whatsapp="https://wa.me/919025839615?text=Hello%2C%20I%20would%20like%20details%20about%20the%20Senganthal%20fundamental%20analysis%20classes.";
+export default function Login({configured,error,previewAvailable,announcement}:{configured:boolean;error?:string;previewAvailable:boolean;announcement:AnnouncementContent}) {
+ const [busy,setBusy]=useState(false),[signInError,setSignInError]=useState(''),[explore,setExplore]=useState(false),[banner,setBanner]=useState(true),[query,setQuery]=useState('');
+ const menu=useRef<HTMLDivElement>(null);
+ useEffect(()=>{function close(e:KeyboardEvent){if(e.key==='Escape')setExplore(false)}function outside(e:PointerEvent){if(menu.current&&!menu.current.contains(e.target as Node))setExplore(false)}document.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{document.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside)}},[]);
+ const destination=(name:string)=>previewAvailable?'/preview#'+encodeURIComponent(name):'#workspace-access';
+ return <main className="edge-welcome">
+ {banner&&<div className="welcome-banner"><span lang="ta">சேர்ந்து கற்போம், முதலீடு செய்வோம், சேர்ந்து வளர்வோம்!</span><span>Explore. Learn. Grow together.</span><button aria-label="Dismiss announcement" onClick={()=>setBanner(false)}><X size={17}/></button></div>}
+ <header className="welcome-nav"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt="Senganthal"/><span>SENGANTHAL<small>செங்காந்தள் முதலீட்டுக் குடும்பம்</small></span></a><form className="welcome-search" action={previewAvailable?'/preview':'/login'} onSubmit={e=>{e.preventDefault();if(previewAvailable)window.location.assign('/preview#search='+encodeURIComponent(query));else document.getElementById('workspace-access')?.scrollIntoView({behavior:'smooth'})}}><Search size={17}/><input aria-label="Search stocks and research tools" placeholder="Search stocks, scans & more" value={query} onChange={e=>setQuery(e.target.value)}/></form><div ref={menu} className="welcome-explore"><button aria-expanded={explore} aria-controls="explore-menu" onClick={()=>setExplore(!explore)}>Explore <ChevronDown size={15}/></button>{explore&&<div id="explore-menu" className="welcome-mega-menu">{[['Market',['Trending Stocks','FII / DII Activity','IPO','Deals']],['Analytics Tools',['Scans','Trading Strategies','Chart Patterns','Sector Rotation']],['Personal Research',['My Portfolio','My Watchlists','Custom Scans','Combination Scans']]].map(([heading,names])=><section key={String(heading)}><span>{heading}</span><div>{(names as string[]).map(name=><a href={destination(name)} key={name}><ResearchIcon kind={name} size={37}/>{name}</a>)}</div></section>)}</div>}</div><a className="welcome-learn-link" href="#learning">Learn</a><ThemeToggle/><a className="button secondary welcome-login-link" href="#workspace-access">Login</a><a className="button primary" href={previewAvailable?'/preview':'#workspace-access'}>{previewAvailable?'Explore for Free':'Get Started'}</a></header>
+ {explore&&<div className="welcome-menu-shade"/>}
+ {announcement.enabled && <div className="welcome-announcement"><HomeAnnouncement value={announcement}/></div>}
+ <section className="welcome-hero"><div><div className="anniversary-ribbon">Celebrating our 1st Anniversary</div><h1>Stock Discovery to Conviction:<br/><em>Simplified</em></h1><p>Stock research, deep analytics, market insights and portfolio tracking.<br/>A clearer view. All in one place.</p><div className="welcome-hero-actions"><a className="button primary" href={previewAvailable?'/preview#Team%20Chat':'#workspace-access'}>Explore the Workspace <ArrowRight size={17}/></a><a className="button secondary" href="#learning">Discover Our Tools</a></div><div className="welcome-facts"><span><strong>Market & Analytics</strong>From the big picture to the details</span><span><strong>Your Research</strong>Watchlists, notes and holdings</span><span><strong>Always Free</strong>No subscription or upgrades</span></div></div><div className="welcome-hero-art"><ResearchIllustration/><div className="welcome-art-label"><span><i/>A workspace built for curious investors</span><small>Illustrative research display</small></div><a href="tel:+919025839615">Call us for any queries: <Phone size={14}/> <strong>+91 90258 39615</strong></a></div></section>
+ <section className="welcome-today" id="learning"><h2>What’s Happening in <span>Markets Today</span></h2><p>A daily perspective. A deeper understanding.</p><div className="welcome-discovery-grid">{[['Top Stocks','Find the stocks moving today','Trending Stocks'],['Momentum Scan','Explore price, volume and trend','Scans'],['Fundamental Score','Understand the quality of a business','Fundamental Scores']].map(([title,description,target],i)=><a className="welcome-discovery-card" href={destination(target)} key={title}><header><ResearchIcon kind={target} size={34}/><span><strong>{title}</strong><small>{description}</small></span><ChevronDown size={14}/></header>{i===0?<div className="welcome-mock-table">{[['Company A','+2.16%'],['Company B','+1.87%'],['Company C','−0.65%']].map(([name,value],j)=><div key={name}><span>{name}</span><i style={{width:55+j*14}}/><strong className={j===2?'negative':'positive'}>{value}</strong></div>)}</div>:i===1?<div className="welcome-mini-chart"><PatternDrawing kind={3}/><span>Price · Momentum · Volume</span></div>:<div className="welcome-score-art"><svg viewBox="0 0 120 100"><polygon points="60,5 102,28 102,73 60,96 18,73 18,28" fill="#eff9f6" stroke="#abd5c9"/><path d="M60 5v91M18 28l84 45M18 73l84-45" stroke="#bfdacf"/><polygon points="60,17 88,37 98,69 60,76 28,67 36,38" fill="#62c5b0" fillOpacity=".6" stroke="#22a38a"/></svg><strong>Quality. Growth. Value.</strong></div>}<footer>Explore {title.toLowerCase()} <ArrowRight size={14}/></footer></a>)}</div><small className="welcome-demo-caption">Illustrations show sample data, not current market quotes.</small></section>
+ <section className="welcome-pathways"><h2>Choose your path to better research</h2><p>Tools to explore independently. A community to learn together.</p><div className="welcome-pathway-headings"><h3>Do It Yourself</h3><h3>Research Together</h3></div><div className="welcome-pathway-grid">{[['scans','Discover stocks with ready-made or custom scans','Explore Scans','Scans'],['chat','Build your understanding with a thoughtful research community','Meet the Community','About Us'],['sector','Know the sectors and stocks gaining market momentum','Explore Sectors','Sector Rotation'],['portfolio','Keep your ideas, watchlists and holdings in one place','Explore Your Workspace','My Portfolio']].map(([kind,title,label,target])=><a key={title} href={destination(target)}><div className="pathway-illustration"><ResearchIcon kind={kind} size={86}/><span>{label} <ChevronDown size={15}/></span></div><h3>{title}</h3></a>)}</div></section>
+ <section className="welcome-investment"><div><span className="eyebrow">FROM IDEAS TO UNDERSTANDING</span><h2>Make fundamentals<br/>your foundation.</h2><p>Build a repeatable research process with Senganthal.</p>{['Read financial statements and company filings','Explore valuations, trends and sector performance','Keep your observations in your own research workspace'].map(t=><div className="welcome-check" key={t}><CheckCircle2 size={18}/>{t}</div>)}<a className="button primary" href={whatsapp} target="_blank" rel="noreferrer">Ask about our learning community <ArrowUpRight size={16}/></a></div><div className="welcome-access">
+          <section id="workspace-access" className="login-terminal-card">
             <div className="terminal-card-top">
               <span className="terminal-status-badge">
                 <span className="pulse-indicator" />
                 WORKSPACE ACCESS
               </span>
-              <span className="terminal-auth-type">Google OAuth 2.0</span>
+              <span className="terminal-auth-type">Member sign-in</span>
             </div>
 
             <h2>Sign In to Terminal</h2>
             <p className="terminal-card-desc">
-              Connect with your authorized Google account to access your portfolio tracking,
+              Sign in with your community Google account to join today's team discussion and access holdings,
               stock scorecards, and exchange filings.
             </p>
 
@@ -226,7 +60,7 @@ export default function Login({
                 setBusy(true);
                 setSignInError("");
                 try {
-                  await signIn("google", { callbackUrl: "/" });
+                  await signIn("google", { callbackUrl: "/#Team%20Chat" });
                 } catch {
                   setSignInError("Could not open Google sign-in. Check your connection and try again.");
                   setBusy(false);
@@ -267,50 +101,9 @@ export default function Login({
 
             <div className="terminal-security-footer">
               <ShieldCheck size={14} />
-              <span>Google OAuth verified • Passwords stay private</span>
+              <span>Your password stays with Google</span>
             </div>
           </section>
-
-          {/* Senganthal Learning & Mentorship Card */}
-          <section className="login-community-card">
-            <div className="community-card-head">
-              <span className="community-card-overline">SENGANTHAL ACADEMY</span>
-              <h3>Make Fundamentals Your Foundation</h3>
-              <p>Join our comprehensive practical learning program to research companies with confidence.</p>
-            </div>
-
-            <div className="community-contact-buttons">
-              <a href="tel:+919025839615" className="comm-btn comm-call">
-                <Phone size={14} /> Call us
-              </a>
-              <a
-                href={whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="comm-btn comm-wa"
-              >
-                <MessageCircle size={14} /> WhatsApp Us
-              </a>
-            </div>
-
-            <details className="community-enrolled-details">
-              <summary>Already enrolled or paid fees?</summary>
-              <p>
-                Send your name and transaction ID via WhatsApp to +91 90258 39615. Our team will verify and
-                grant workspace access.
-              </p>
-            </details>
-          </section>
-        </aside>
-      </div>
-
-      {/* Clean Bottom Footer */}
-      <footer className="anniversary-footer">
-        <span>
-          <strong>SENGANTHAL</strong> | Celebrating 1st Anniversary of Research Community
-        </span>
-        <span>Strictly educational research & financial analysis • Not SEBI registered investment advice</span>
-      </footer>
-    </main>
-  );
+ </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a></footer>
+ </main>;
 }

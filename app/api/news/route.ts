@@ -2,6 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { api, requireMember, limited, HttpError } from "@/lib/http";
 import { cached } from "@/lib/market";
 import { newsImage } from "@/lib/news-image";
+import { indiaDay, isFreshOrderNews } from "@/lib/order-news";
 
 type NewsRow = { title: string; url: string; source: string; publishedAt: string | null; imageUrl: string | null };
 const parser = new XMLParser({ ignoreAttributes: false, processEntities: false });
@@ -45,13 +46,26 @@ function parseItems(xml: string, fallbackSource: string): NewsRow[] {
 }
 
 async function fetchFeed(url: string, source: string) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(12000), headers: { Accept: "application/rss+xml, application/xml, text/xml", "User-Agent": "Senganthal Research Terminal/1.0" } });
+  const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(12000), headers: { Accept: "application/rss+xml, application/xml, text/xml", "User-Agent": "Senganthal Research Terminal/1.0" } });
   if (!response.ok) throw new Error(source + " feed unavailable");
   return parseItems(await response.text(), source);
 }
 
 async function googleNews(query: string) {
   return fetchFeed("https://news.google.com/rss/search?q=" + encodeURIComponent(query) + "&hl=en-IN&gl=IN&ceid=IN:en", "Google News");
+}
+
+async function recentOrderNews(query: string) {
+  const company = query.replace(/["()]/g, " ").trim();
+  const searches = [
+    "India listed company bags order",
+    "India stocks secures contract",
+    "India company receives order",
+    "India company wins contract"
+  ];
+  const results = await Promise.allSettled(searches.map(search => googleNews(`${company} ${search} when:2d`)));
+  if (results.every(result => result.status === "rejected")) throw new HttpError(502, "Recent order news feed unavailable.");
+  return dedupe(results.flatMap(result => result.status === "fulfilled" ? result.value : []).filter(item => isFreshOrderNews(item)));
 }
 
 async function googleMoneycontrolNews(query: string) {
@@ -93,9 +107,14 @@ function dedupe(items: NewsRow[]) {
 
 export const GET = api(async request => {
   const member = await requireMember(); await limited(member, "news", 20);
-  const raw = new URL(request.url).searchParams.get("q") || "India stock market";
-  const source = new URL(request.url).searchParams.get("source") === "moneycontrol" ? "moneycontrol" : new URL(request.url).searchParams.get("source") === "google" ? "google" : "all";
+  const params = new URL(request.url).searchParams;
+  const orders = params.get("mode") === "orders";
+  const raw = params.get("q") || (orders ? "" : "India stock market");
+  const source = params.get("source") === "moneycontrol" ? "moneycontrol" : params.get("source") === "google" ? "google" : "all";
   const query = raw.trim().slice(0, 100);
+  if (orders) return cached("news:orders:v1:" + indiaDay(Date.now()) + ":" + query.toLowerCase(), async () => ({
+    items: await recentOrderNews(query), fetchedAt: new Date().toISOString()
+  }), 60000);
   return cached("news:v3:" + source + ":" + query, async () => {
     const results = await Promise.allSettled([
       ...(source !== "moneycontrol" ? [googleNews(query)] : []),

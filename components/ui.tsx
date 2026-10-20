@@ -1,5 +1,5 @@
 "use client";
-import { ArrowDownRight, ArrowUpRight, LoaderCircle, Info, SearchX } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Info, SearchX } from "lucide-react";
 import type { Candle, Metric } from "@/lib/types";
 export function number(value: number | null | undefined, digits = 2) { return value == null ? "—" : new Intl.NumberFormat("en-IN", {maximumFractionDigits: digits}).format(value); }
 export function money(value: number | null | undefined) { return value == null ? "—" : "₹" + number(value); }
@@ -9,7 +9,7 @@ export function metricValue(metric: Metric) {
   return (metric.unit === "₹" ? "₹" : "") + number(metric.value) + (metric.unit !== "₹" ? metric.unit : "");
 }
 export function Change({value}: {value: number | null}) { return <span className={value == null ? "muted" : value >= 0 ? "positive change" : "negative change"}>{value == null ? "—" : <>{value >= 0 ? <ArrowUpRight size={15}/> : <ArrowDownRight size={15}/>} {value >= 0 ? "+" : ""}{number(value)}%</>}</span>; }
-export function Loading({text = "Loading research…"}: {text?: string}) { return <div className="loading" role="status"><LoaderCircle className="spin" size={24}/><span>{text}</span></div>; }
+export function Loading({text = "Loading research…"}: {text?: string}) { return <div className="loading" role="status" aria-live="polite"><div className="skeleton-lines" aria-hidden="true"><i/><i/><i/></div><span>{text}</span></div>; }
 export function Empty({title, text}: {title: string; text: string}) { return <div className="empty"><SearchX size={30}/><h3>{title}</h3><p>{text}</p></div>; }
 export function Notice({children}: {children: React.ReactNode}) { return <div className="notice"><Info size={17}/><span>{children}</span></div>; }
 export function Chart({history, compact = false}: {history: Candle[]; compact?: boolean}) {

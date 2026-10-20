@@ -1,6 +1,8 @@
 import YahooFinance from "yahoo-finance2";
 import { finite, percentFraction, qualityScore } from "./analytics";
 import type { Candle, Metric, Quote, Stock } from "./types";
+import { historyRange } from './trending';
+import {returnOnCapitalEmployed,annualGrowth,margin} from './financial-math';
 
 const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 const INR = "\u20b9";
@@ -11,10 +13,13 @@ export const indices = ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT"];
 export function ticker(symbol: string) { return symbol.startsWith("^") || symbol.endsWith(".NS") || symbol.endsWith(".BO") ? symbol : symbol + ".NS"; }
 
 const cache = new Map<string, { data: unknown; expires: number }>();
+const pending = new Map<string,Promise<unknown>>();
 export async function cached<T>(key: string, fetcher: () => Promise<T>, ttl = 60000): Promise<T> {
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.data as T;
-  const data = await fetcher();
+  if(pending.has(key))return pending.get(key) as Promise<T>;
+  const work=fetcher();pending.set(key,work);
+  let data:T;try{data=await work}finally{pending.delete(key)}
   if (cache.size > 300) cache.delete(cache.keys().next().value!);
   cache.set(key, { data, expires: Date.now() + ttl });
   return data;
@@ -41,8 +46,8 @@ function cagrFromRows(rows: FundamentalRow[], accessor: (row: FundamentalRow | u
   const latest = rows.find(row => accessor(row) !== null);
   const older = latest ? rows.slice(rows.indexOf(latest) + 1).reverse().find(row => accessor(row) !== null) : undefined;
   if (!latest || !older) return null;
-  const years = Math.max(1, Math.min(5, Math.round((dateMs(latest.date) - dateMs(older.date)) / 31557600000) || rows.indexOf(older)));
-  return cagr(accessor(latest), accessor(older), years);
+  const years = (dateMs(latest.date) - dateMs(older.date)) / 31557600000;
+  return annualGrowth(accessor(latest), accessor(older), years);
 }
 type HoldingSummary = { promoterHolding: number | null; promoterPledge: number | null; period?: string; sourceUrl?: string };
 async function nseHoldingSummary(symbol: string): Promise<HoldingSummary | null> {
@@ -131,9 +136,9 @@ function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false, shares:
         period: periodLabel,
         revenue: rev !== null ? Math.round(rev / 10000000) : null,
         operatingProfit: op !== null ? Math.round(op / 10000000) : null,
-        opm: rev && op ? Math.round(op / rev * 1000) / 10 : null,
+        opm: margin(op,rev),
         netProfit: pat !== null ? Math.round(pat / 10000000) : null,
-        npm: rev && pat ? Math.round(pat / rev * 1000) / 10 : null,
+        npm: margin(pat,rev),
         eps: eps !== null ? Math.round(eps * 100) / 100 : null
       });
     }
@@ -185,6 +190,22 @@ export async function history(symbol: string): Promise<Candle[]> {
     const result = await yahoo.chart(ticker(symbol), { period1, interval: "1d" });
     return result.quotes.filter(q => finite(q.close) !== null).map(q => ({ date: q.date.toISOString(), close: q.close!, high: finite(q.high) ?? undefined, low: finite(q.low) ?? undefined, volume: q.volume || 0 }));
   }, 300000);
+}
+
+export async function availableHistoryRange(symbol:string) {
+  return cached('full-history-range:'+symbol,async()=>{
+    const result=await yahoo.chart(ticker(symbol),{period1:new Date('1980-01-01'),interval:'1d'});
+    const range=historyRange(symbol,result.quotes.map(q=>({date:q.date.toISOString(),high:finite(q.high)??undefined,low:finite(q.low)??undefined})));
+    if(!range)throw new Error('Historical range unavailable');return range;
+  },86400000);
+}
+
+export async function companyWebsite(symbol:string) {
+  return cached('company-website:'+symbol,async()=>{
+    const profile=await yahoo.quoteSummary(ticker(symbol),{modules:['assetProfile']});
+    const website=profile.assetProfile?.website;if(!website)return null;
+    try {const url=new URL(website);return ['https:','http:'].includes(url.protocol)&&url.hostname.includes('.')?url.hostname:null}catch{return null}
+  },86400000);
 }
 
 export async function analyze(symbol: string): Promise<Stock> {
@@ -255,7 +276,7 @@ export async function analyze(symbol: string): Promise<Stock> {
     add("yield", "Dividend yield", percentFraction(d?.dividendYield), "%");
     const pickedRoe = fallback(percentFraction(f?.returnOnEquity), ratio(annualNetIncome, annualEquity, 100));
     add("roe", "Return on equity", pickedRoe.value, "%", v => v >= 15, pickedRoe.source, pickedRoe.period);
-    add("roce", "ROCE", pickedRoe.value !== null ? pickedRoe.value * 0.88 : null, "%", v => v >= 15, pickedRoe.source, pickedRoe.period);
+    add("roce", "ROCE", returnOnCapitalEmployed(annualEbit,rowNumber(latest,'totalAssets'),annualCurrentLiabilities), "%", v => v >= 15, annualSource+' · EBIT / (total assets − current liabilities)', annualPeriod);
     addFallback("de", "Debt / equity", f?.debtToEquity == null ? null : f.debtToEquity / 100, ratio(annualDebt, annualEquity), MULTIPLE, v => v >= 0 && v < 1);
     add("interestCoverage", "Interest coverage", ratio(annualEbit, annualInterestExpense), MULTIPLE, v => v > 3, annualSource, annualPeriod);
     addFallback("opm", "Operating margin", percentFraction(f?.operatingMargins), ratio(annualOperatingIncome, annualRevenue, 100), "%", v => v >= 15);
@@ -270,10 +291,8 @@ export async function analyze(symbol: string): Promise<Stock> {
     add("marketCap", "Market capitalisation", marketCap, INR);
     addFallback("currentRatio", "Current ratio", finite(f?.currentRatio), ratio(annualCurrentAssets, annualCurrentLiabilities), MULTIPLE, v => v >= 1.5 && v <= 2.5);
 
-    const growthForIntrinsic = Math.max(5, ...[percentFraction(f?.earningsGrowth), annualRevenueGrowth].filter((value): value is number => value !== null));
-    const intrinsic = eps !== null && eps > 0 ? eps * (8.5 + 2 * growthForIntrinsic) * 6 / 8 : null;
-    add("intrinsicValue", "Intrinsic value", intrinsic, INR);
-    add("marginSafety", "Margin of safety", intrinsic !== null && intrinsic > 0 && q.price !== null ? (intrinsic - q.price) / intrinsic * 100 : null, "%", v => v > 0);
+    add("intrinsicValue", "Intrinsic value", null, INR, undefined,'Not calculated: explicit valuation assumptions are required');
+    add("marginSafety", "Margin of safety", null, "%", undefined,'Not calculated without an independently assessed value');
     add("graham", "Graham number", eps !== null && book !== null && eps > 0 && book > 0 ? Math.sqrt(22.5 * eps * book) : null, INR);
     add("eps", "Earnings per share", eps, INR);
     add("bookValue", "Book value per share", book, INR);
@@ -284,7 +303,7 @@ export async function analyze(symbol: string): Promise<Stock> {
     addFallback("totalCash", "Total cash", finite(f?.totalCash), annualCash, INR);
     addFallback("operatingCashFlow", "Operating cash flow", finite(f?.operatingCashflow), annualOperatingCashFlow, INR);
     add("fcfYield", "Free cash flow yield", ratio(firstNumber(finite(f?.freeCashflow), annualFreeCashFlow), marketCap, 100), "%");
-    add("promoterHolding", "Promoter holding", firstNumber(holding?.promoterHolding ?? null, percentFraction(k?.heldPercentInsiders)), "%", v => v > 35, holding?.promoterHolding !== null && holding?.promoterHolding !== undefined ? "NSE shareholding filing" : quoteSource, holding?.period);
+    add("promoterHolding", "Promoter holding", holding?.promoterHolding??null, "%", v => v > 35, "NSE shareholding filing", holding?.period);
     add("promoterPledge", "Promoter pledged shares", holding?.promoterPledge ?? null, "%", v => v <= 5, "NSE shareholding filing", holding?.period);
 
     const { score, coverage } = qualityScore(metrics);
@@ -305,7 +324,7 @@ export async function analyze(symbol: string): Promise<Stock> {
       warnings: [
         ...(summaryResult.status === "rejected" ? ["Fundamental data is unavailable. No score is calculated from missing values."] : []),
         ...(annualResult.status === "rejected" ? ["Annual fundamentals fallback could not be loaded."] : []),
-        ...(holdingResult.status === "rejected" ? ["Exchange shareholding could not be loaded; promoter holding may fall back to provider data."] : []),
+        ...(holdingResult.status === "rejected" ? ["Exchange shareholding could not be loaded; promoter holding is unavailable."] : []),
         ...(historyResult.status === "rejected" ? ["Price history is unavailable."] : []),
         "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
         "The fundamental score is a transparent checklist, not a buy, hold or sell recommendation."

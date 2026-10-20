@@ -1,7 +1,8 @@
 "use client";
+import { LocalPdfReader } from "./local-pdf-reader";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, FileText, Globe2, ImagePlus, ListChecks, MessageSquare, Play, Plus, RefreshCw, Search, Send, Upload, X } from "lucide-react";
+import { ArrowRight, Check, FileText, Globe2, ImagePlus, ListChecks, MessageSquare, Play, Plus, RefreshCw, Search, Send, Trash2, Upload, X } from "lucide-react";
 import type { Message, ReportValues, WatchItem } from "@/lib/types";
 import { maxChatImageBytes } from "@/lib/chat-image";
 import { demoStock, demoWatchlist } from "@/lib/demo";
@@ -34,11 +35,20 @@ async function prepareChatImage(file: File): Promise<ChatAttachment> {
 
 export function ChatPanel({ preview, onError, canPost = true }: Props & { canPost?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [todayOnly, setTodayOnly] = useState(true);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(!preview);
   const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [imageBusy, setImageBusy] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const indiaDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" });
+  const today = indiaDate.format(new Date());
+  const todaysMessages = messages.filter(message => {
+    const date = new Date(message.createdAt);
+    return !Number.isNaN(date.getTime()) && indiaDate.format(date) === today;
+  });
+  const visibleMessages = todayOnly ? todaysMessages : messages;
 
   const load = useCallback(async () => {
     if (preview) return;
@@ -89,24 +99,39 @@ export function ChatPanel({ preview, onError, canPost = true }: Props & { canPos
     }
   }
 
+  async function deleteMessage(message: Message) {
+    if (!message.canDelete || !window.confirm("Delete this message for everyone?")) return;
+    setDeleting(message.id);
+    try {
+      await request("/api/chat", { method: "DELETE", body: JSON.stringify({ id: message.id }) });
+      setMessages(current => current.filter(item => item.id !== message.id));
+      onError("");
+    } catch (error) {
+      onError((error as Error).message);
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   return <section className="panel chat-panel">
     <div className="panel-heading">
       <div>
         <h2>Research room</h2>
-        <p className="small muted">Shared with active team members - updates every 15 seconds</p>
+        <p className="small muted">Today’s discussion · India time · updates every 15 seconds</p>
       </div>
       <MessageSquare size={22} />
     </div>
     {preview && <Notice>Team conversations appear here after sign-in. The preview does not show private messages.</Notice>}
+    <div className="chat-day-switch" role="group" aria-label="Discussion time range"><button type="button" aria-pressed={todayOnly} onClick={() => setTodayOnly(true)}>Today <span>{todaysMessages.length}</span></button><button type="button" aria-pressed={!todayOnly} onClick={() => setTodayOnly(false)}>Recent history <span>{messages.length}</span></button></div>
     <div className="chat-messages">
-      {loading ? <Loading text="Loading conversations..." /> : messages.length ? messages.map(m => <article className="chat-message" key={m.id}>
+      {loading ? <Loading text="Loading conversations..." /> : visibleMessages.length ? visibleMessages.map(m => <article className={`chat-message ${m.canDelete ? "chat-message-own" : ""}`} key={m.id}>
         <span className="avatar">{m.name.slice(0, 1)}</span>
-        <div><strong>{m.name}</strong><small>{relativeTime(m.createdAt)}</small>{m.text && <p>{m.text}</p>}{m.imageId && <a className="chat-image-link" href={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} target="_blank" rel="noreferrer" aria-label={"Open image shared by " + m.name}><img src={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} alt={"Image shared by " + m.name} loading="lazy" /></a>}</div>
-      </article>) : <Empty title="A place to think together" text="Share a research idea, ask a question, or discuss a company with your team." />}
+        <div><div className="chat-message-meta"><strong>{m.name}</strong><small>{relativeTime(m.createdAt)}</small>{m.canDelete && <button type="button" className="chat-delete" disabled={deleting === m.id} onClick={() => void deleteMessage(m)} aria-label={`Delete message from ${m.name}`} title="Delete for everyone"><Trash2 size={15}/></button>}</div>{m.text && <p>{m.text}</p>}{m.imageId && <a className="chat-image-link" href={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} target="_blank" rel="noreferrer" aria-label={"Open image shared by " + m.name}><img src={"/api/chat/image?id=" + encodeURIComponent(m.imageId)} alt={"Image shared by " + m.name} loading="lazy" /></a>}</div>
+      </article>) : <Empty title={todayOnly ? "Start today’s discussion" : "A place to think together"} text={todayOnly ? "No messages yet today. Share the first idea or question with your team." : "Share a research idea, ask a question, or discuss a company with your team."} />}
     </div>
     <form onSubmit={send} className="chat-compose">
       <div className="chat-compose-main">
-        <textarea aria-label="Message to the team" placeholder="Share a thought with your team..." value={text} onChange={e => setText(e.target.value)} maxLength={2000} rows={2} required={!attachment} disabled={preview || !canPost || busy} />
+        <textarea aria-label="Message to the team" placeholder="Message the team · Enter to send, Shift+Enter for a new line" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (text.trim() || attachment) e.currentTarget.form?.requestSubmit(); } }} maxLength={2000} rows={2} required={!attachment} disabled={preview || !canPost || busy} />
         <label className="chat-attach-button" title="Add image"><ImagePlus size={19} /><input aria-label="Add image" type="file" accept="image/png,image/jpeg,image/webp" disabled={preview || !canPost || busy || imageBusy} onChange={e => { void selectImage(e.target.files?.[0]); e.target.value = ""; }} /></label>
         <button className="button primary" disabled={preview || !canPost || busy || imageBusy || (!text.trim() && !attachment)}><Send size={17} />{busy ? "Sending..." : "Send"}</button>
       </div>
@@ -317,33 +342,10 @@ export function ReportsPanel({ preview, onError, initialSymbol }: Props & { init
 
   useEffect(() => { void load(); }, [load]);
 
-  async function extract(e: React.FormEvent) {
-    e.preventDefault();
-    if (!file || preview) return;
-    if (file.size > 3 * 1024 * 1024) {
-      onError("Choose a PDF no larger than 3 MB.");
-      return;
-    }
-    setBusy(true);
-    setValues(null);
-    onError("");
-    setNotice("");
-    const body = new FormData();
-    body.set("file", file);
-    body.set("symbol", symbol);
-    body.set("consent", String(consent));
-    try {
-      setValues((await request<{ values: ReportValues }>("/api/reports", { method: "POST", body })).values);
-    } catch (e) {
-      onError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!values || preview) return;
+    if (!values) return;
+    if (preview) { setSaved(rows => [values, ...rows.filter(r => r.symbol !== values.symbol || r.period !== values.period)]); setValues(null); setNotice("Saved in this demo session only."); return; }
     setBusy(true);
     try {
       await request("/api/reports", { method: "POST", body: JSON.stringify(values) });
@@ -358,21 +360,12 @@ export function ReportsPanel({ preview, onError, initialSymbol }: Props & { init
   }
 
   return <>
-    <Notice>Enter figures from an official company filing, or upload a PDF to extract them. Review the figures before saving. Your PDF is sent to Anthropic only when you select Extract. The original file is not stored by this app.</Notice>
+    <Notice>Enter figures from an official company filing, or upload a PDF to extract them. Review the figures before saving. PDF text is read locally in your browser without a paid service. Only confirmed figures are saved to your account.</Notice>
     <section className="panel">
       <div className="panel-heading"><div><h2>Enter filing figures</h2><p className="small muted">Record figures directly from a company filing. PDF extraction is optional.</p></div><FileText size={24} /></div>
-      <button className="button secondary" disabled={preview || busy} onClick={() => { onError(""); setNotice(""); setValues({ symbol, period: "", revenue: null, netProfit: null, operatingCashFlow: null, totalDebt: null, equity: null, notes: "" }); }}><Plus size={16} />Enter figures manually</button>
+      <button className="button secondary" disabled={busy} onClick={() => { onError(""); setNotice(""); setValues({ symbol, period: "", revenue: null, netProfit: null, operatingCashFlow: null, totalDebt: null, equity: null, notes: "" }); }}><Plus size={16} />Enter figures manually</button>
     </section>
-    <section className="panel">
-      <div className="panel-heading"><div><h2>Read a company filing</h2><p className="small muted">PDF only - up to 3 MB - use a short results filing, not a full annual report</p></div><FileText size={24} /></div>
-      <form onSubmit={extract}>
-        <label>Company symbol<input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())} required maxLength={24} placeholder="e.g. TCS" disabled={preview || busy} /></label>
-        <label className="upload-zone"><Upload size={30} /><strong>{file ? file.name : "Choose a results PDF"}</strong><span>Quarterly or annual financial results</span><input type="file" accept="application/pdf,.pdf" onChange={e => setFile(e.target.files?.[0] || null)} disabled={preview || busy} /></label>
-        <label className="checkbox-label"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} disabled={preview || busy} required />I agree to send this PDF to Anthropic for extraction.</label>
-        <button className="button primary" disabled={preview || busy || !file || !consent}><FileText size={16} />{busy ? "Processing..." : "Extract figures"}</button>
-      </form>
-      {preview && <p className="small muted">Connect the extraction service and sign in to upload a filing.</p>}
-    </section>
+    <LocalPdfReader symbol={symbol} onReview={setValues}/>
     {values && <section className="panel">
       <h2>Review before saving</h2>
       <p className="muted">All amounts are in INR crore. Confirm the company, period, units and figures against your PDF.</p>

@@ -6,5 +6,5 @@ export type FinancialStatementRow = { period: string; revenue: number | null; op
 export type Stock = Quote & { sector: string; industry: string; description: string; metrics: Metric[]; score: number | null; coverage: number; history: Candle[]; financials?: { annual: FinancialStatementRow[]; quarterly: FinancialStatementRow[] }; fetchedAt: string; warnings: string[] };
 export type WatchItem = { symbol: string; name: string; group: string; addedAt?: string };
 export type NewsItem = { title: string; url: string; source: string; publishedAt: string | null; imageUrl?: string | null };
-export type Message = { id: string; name: string; text: string; createdAt: string; imageId?: string };
+export type Message = { id: string; name: string; text: string; createdAt: string; imageId?: string; canDelete?: boolean };
 export type ReportValues = { symbol: string; period: string; revenue: number | null; netProfit: number | null; operatingCashFlow: number | null; totalDebt: number | null; equity: number | null; notes: string };
