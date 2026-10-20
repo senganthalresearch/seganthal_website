@@ -8,7 +8,7 @@ import { can, type Permission } from './permissions';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export async function requireMember(admin = false) {
   const member = await currentMember();
-  if (!member) throw new HttpError(401, "Sign in with an approved Google account to continue.");
+  if (!member) throw new HttpError(403, "An active subscription is required. Sign in or renew your access.");
   if (admin && member.role !== "admin") throw new HttpError(403, "Administrator access required.");
   return member;
 }

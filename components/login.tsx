@@ -5,9 +5,10 @@ import { ArrowUpRight, ArrowRight, ChevronDown, Phone, MessageCircle, ShieldChec
 import { ThemeToggle } from "./theme";
 import { ResearchIcon, ResearchIllustration, PatternDrawing } from "./research-art";
 import { HomeAnnouncement } from "./home-announcement";
-import type { AnnouncementContent } from "@/lib/site-settings";
+import { dailyStockVisible, type AnnouncementContent, type DailyStockContent } from "@/lib/site-settings";
+import { PhoneAccess } from "./phone-access";
 const whatsapp="https://wa.me/919025839615?text=Hello%2C%20I%20would%20like%20details%20about%20the%20Senganthal%20fundamental%20analysis%20classes.";
-export default function Login({configured,error,previewAvailable,announcement}:{configured:boolean;error?:string;previewAvailable:boolean;announcement:AnnouncementContent}) {
+export default function Login({configured,phoneAvailable,error,previewAvailable,announcement,dailyStock}:{configured:boolean;phoneAvailable:boolean;error?:string;previewAvailable:boolean;announcement:AnnouncementContent;dailyStock:DailyStockContent}) {
  const [busy,setBusy]=useState(false),[signInError,setSignInError]=useState(''),[explore,setExplore]=useState(false),[banner,setBanner]=useState(true),[query,setQuery]=useState('');
  const menu=useRef<HTMLDivElement>(null);
  useEffect(()=>{function close(e:KeyboardEvent){if(e.key==='Escape')setExplore(false)}function outside(e:PointerEvent){if(menu.current&&!menu.current.contains(e.target as Node))setExplore(false)}document.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{document.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside)}},[]);
@@ -17,7 +18,8 @@ export default function Login({configured,error,previewAvailable,announcement}:{
  <header className="welcome-nav"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt="Senganthal"/><span>SENGANTHAL<small>செங்காந்தள் முதலீட்டுக் குடும்பம்</small></span></a><form className="welcome-search" action={previewAvailable?'/preview':'/login'} onSubmit={e=>{e.preventDefault();if(previewAvailable)window.location.assign('/preview#search='+encodeURIComponent(query));else document.getElementById('workspace-access')?.scrollIntoView({behavior:'smooth'})}}><Search size={17}/><input aria-label="Search stocks and research tools" placeholder="Search stocks, scans & more" value={query} onChange={e=>setQuery(e.target.value)}/></form><div ref={menu} className="welcome-explore"><button aria-expanded={explore} aria-controls="explore-menu" onClick={()=>setExplore(!explore)}>Explore <ChevronDown size={15}/></button>{explore&&<div id="explore-menu" className="welcome-mega-menu">{[['Market',['Trending Stocks','FII / DII Activity','IPO','Deals']],['Analytics Tools',['Scans','Trading Strategies','Chart Patterns','Sector Rotation']],['Personal Research',['My Portfolio','My Watchlists','Custom Scans','Combination Scans']]].map(([heading,names])=><section key={String(heading)}><span>{heading}</span><div>{(names as string[]).map(name=><a href={destination(name)} key={name}><ResearchIcon kind={name} size={37}/>{name}</a>)}</div></section>)}</div>}</div><a className="welcome-learn-link" href="#learning">Learn</a><ThemeToggle/><a className="button secondary welcome-login-link" href="#workspace-access">Login</a><a className="button primary" href={previewAvailable?'/preview':'#workspace-access'}>{previewAvailable?'Explore for Free':'Get Started'}</a></header>
  {explore&&<div className="welcome-menu-shade"/>}
  {announcement.enabled && <div className="welcome-announcement"><HomeAnnouncement value={announcement}/></div>}
- <section className="welcome-hero"><div><div className="anniversary-ribbon">Celebrating our 1st Anniversary</div><h1>Stock Discovery to Conviction:<br/><em>Simplified</em></h1><p>Stock research, deep analytics, market insights and portfolio tracking.<br/>A clearer view. All in one place.</p><div className="welcome-hero-actions"><a className="button primary" href={previewAvailable?'/preview#Team%20Chat':'#workspace-access'}>Explore the Workspace <ArrowRight size={17}/></a><a className="button secondary" href="#learning">Discover Our Tools</a></div><div className="welcome-facts"><span><strong>Market & Analytics</strong>From the big picture to the details</span><span><strong>Your Research</strong>Watchlists, notes and holdings</span><span><strong>Always Free</strong>No subscription or upgrades</span></div></div><div className="welcome-hero-art"><ResearchIllustration/><div className="welcome-art-label"><span><i/>A workspace built for curious investors</span><small>Illustrative research display</small></div><a href="tel:+919025839615">Call us for any queries: <Phone size={14}/> <strong>+91 90258 39615</strong></a></div></section>
+ {dailyStockVisible(dailyStock) && <aside className="welcome-stock-focus"><span>Today’s stock alert · {dailyStock.date}</span><strong>{dailyStock.symbol} — {dailyStock.title}</strong><a href="#workspace-access">Sign in for the research note <ArrowRight size={15}/></a></aside>}
+ <section className="welcome-hero"><div><div className="anniversary-ribbon">Celebrating our 1st Anniversary</div><h1>Stock Discovery to Conviction:<br/><em>Simplified</em></h1><p>Stock research, deep analytics, market insights and portfolio tracking.<br/>A clearer view. All in one place.</p><div className="welcome-hero-actions"><a className="button primary" href={previewAvailable?'/preview#Team%20Chat':'#workspace-access'}>Explore the Workspace <ArrowRight size={17}/></a><a className="button secondary" href="#learning">Discover Our Tools</a></div><div className="welcome-facts"><span><strong>Market & Analytics</strong>From the big picture to the details</span><span><strong>Your Research</strong>Watchlists, notes and holdings</span><span><strong>₹600 / year</strong>Automatically renews yearly</span></div></div><div className="welcome-hero-art"><ResearchIllustration/><div className="welcome-art-label"><span><i/>A workspace built for curious investors</span><small>Illustrative research display</small></div><a href="tel:+919025839615">Call us for any queries: <Phone size={14}/> <strong>+91 90258 39615</strong></a></div></section>
  <section className="welcome-today" id="learning"><h2>What’s Happening in <span>Markets Today</span></h2><p>A daily perspective. A deeper understanding.</p><div className="welcome-discovery-grid">{[['Top Stocks','Find the stocks moving today','Trending Stocks'],['Momentum Scan','Explore price, volume and trend','Scans'],['Fundamental Score','Understand the quality of a business','Fundamental Scores']].map(([title,description,target],i)=><a className="welcome-discovery-card" href={destination(target)} key={title}><header><ResearchIcon kind={target} size={34}/><span><strong>{title}</strong><small>{description}</small></span><ChevronDown size={14}/></header>{i===0?<div className="welcome-mock-table">{[['Company A','+2.16%'],['Company B','+1.87%'],['Company C','−0.65%']].map(([name,value],j)=><div key={name}><span>{name}</span><i style={{width:55+j*14}}/><strong className={j===2?'negative':'positive'}>{value}</strong></div>)}</div>:i===1?<div className="welcome-mini-chart"><PatternDrawing kind={3}/><span>Price · Momentum · Volume</span></div>:<div className="welcome-score-art"><svg viewBox="0 0 120 100"><polygon points="60,5 102,28 102,73 60,96 18,73 18,28" fill="#eff9f6" stroke="#abd5c9"/><path d="M60 5v91M18 28l84 45M18 73l84-45" stroke="#bfdacf"/><polygon points="60,17 88,37 98,69 60,76 28,67 36,38" fill="#62c5b0" fillOpacity=".6" stroke="#22a38a"/></svg><strong>Quality. Growth. Value.</strong></div>}<footer>Explore {title.toLowerCase()} <ArrowRight size={14}/></footer></a>)}</div><small className="welcome-demo-caption">Illustrations show sample data, not current market quotes.</small></section>
  <section className="welcome-pathways"><h2>Choose your path to better research</h2><p>Tools to explore independently. A community to learn together.</p><div className="welcome-pathway-headings"><h3>Do It Yourself</h3><h3>Research Together</h3></div><div className="welcome-pathway-grid">{[['scans','Discover stocks with ready-made or custom scans','Explore Scans','Scans'],['chat','Build your understanding with a thoughtful research community','Meet the Community','About Us'],['sector','Know the sectors and stocks gaining market momentum','Explore Sectors','Sector Rotation'],['portfolio','Keep your ideas, watchlists and holdings in one place','Explore Your Workspace','My Portfolio']].map(([kind,title,label,target])=><a key={title} href={destination(target)}><div className="pathway-illustration"><ResearchIcon kind={kind} size={86}/><span>{label} <ChevronDown size={15}/></span></div><h3>{title}</h3></a>)}</div></section>
  <section className="welcome-investment"><div><span className="eyebrow">FROM IDEAS TO UNDERSTANDING</span><h2>Make fundamentals<br/>your foundation.</h2><p>Build a repeatable research process with Senganthal.</p>{['Read financial statements and company filings','Explore valuations, trends and sector performance','Keep your observations in your own research workspace'].map(t=><div className="welcome-check" key={t}><CheckCircle2 size={18}/>{t}</div>)}<a className="button primary" href={whatsapp} target="_blank" rel="noreferrer">Ask about our learning community <ArrowUpRight size={16}/></a></div><div className="welcome-access">
@@ -32,7 +34,7 @@ export default function Login({configured,error,previewAvailable,announcement}:{
 
             <h2>Sign In to Terminal</h2>
             <p className="terminal-card-desc">
-              Sign in with your community Google account to join today's team discussion and access holdings,
+              Sign in with Google or your verified mobile account to join today's team discussion and access holdings,
               stock scorecards, and exchange filings.
             </p>
 
@@ -60,7 +62,7 @@ export default function Login({configured,error,previewAvailable,announcement}:{
                 setBusy(true);
                 setSignInError("");
                 try {
-                  await signIn("google", { callbackUrl: "/#Team%20Chat" });
+                  await signIn("google", { callbackUrl: "/" });
                 } catch {
                   setSignInError("Could not open Google sign-in. Check your connection and try again.");
                   setBusy(false);
@@ -91,6 +93,8 @@ export default function Login({configured,error,previewAvailable,announcement}:{
               <ArrowUpRight size={18} className="btn-arrow" />
             </button>
 
+            <PhoneAccess available={phoneAvailable} />
+
             {previewAvailable && (
               <a href="/preview" className="login-preview-action">
                 <Sparkles size={15} />
@@ -101,7 +105,7 @@ export default function Login({configured,error,previewAvailable,announcement}:{
 
             <div className="terminal-security-footer">
               <ShieldCheck size={14} />
-              <span>Your password stays with Google</span>
+              <span>Google passwords stay with Google. Mobile passwords are stored as one-way hashes.</span>
             </div>
           </section>
  </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a></footer>
