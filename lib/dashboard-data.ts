@@ -1,4 +1,5 @@
 import { cached, quotes } from "./market";
+import { upstreamJson } from "./upstream";
 import { numeric, parseCsv, quarterReturns } from "./data-utils";
 import type { Quote } from "./types";
 
@@ -8,16 +9,9 @@ type Row = Record<string, unknown>;
 
 export async function nseJson<T = Record<string, unknown>>(path: string): Promise<T> {
   return cached("nse:" + path, async () => {
-    const r = await fetch(nseBase + path, {
-      signal: AbortSignal.timeout(12000),
-      headers: {
-        Accept: "application/json,text/plain,*/*",
-        "User-Agent": "Mozilla/5.0",
-        Referer: "https://www.nseindia.com/"
-      }
+    return upstreamJson<T>("NSE", nseBase + path, {
+      headers: { Accept: "application/json,text/plain,*/*", "User-Agent": "Mozilla/5.0", Referer: "https://www.nseindia.com/" }
     });
-    if (!r.ok) throw new Error("NSE feed unavailable");
-    return r.json() as Promise<T>;
   }, 60000);
 }
 

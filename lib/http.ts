@@ -3,6 +3,7 @@ import { currentMember } from "./auth";
 import { db } from "./db";
 import type { Member } from "./types";
 import { ZodError } from "zod";
+import { serviceFailure } from "./upstream";
 import { can, type Permission } from './permissions';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 export async function requireMember(admin = false) {
@@ -34,11 +35,14 @@ export function api(handler: (request: Request) => Promise<unknown>) {
     try { const data = await handler(request); return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store" } }); }
     catch (error) {
       const status = error instanceof HttpError ? error.status : error instanceof ZodError ? 400 : 503;
-      const message = error instanceof HttpError ? error.message : error instanceof ZodError ? "Please check the supplied fields." : "This service is unavailable right now. Please try again shortly.";
+      const failure = serviceFailure(error);
+      const message = error instanceof HttpError ? error.message : error instanceof ZodError ? "Please check the supplied fields." : failure.message;
       if (status >= 500) {
-        try { await (await db()).collection("errors").insertOne({ page: new URL(request.url).pathname, kind: "ServiceError", message, createdAt: new Date() }); } catch { /* The error log must not replace the original response. */ }
+        console.error("ServiceError", { page: new URL(request.url).pathname, method: request.method, status, ...failure });
+        // If MongoDB itself failed, logging there would repeat the same timeout.
+        if (failure.service !== "MongoDB") try { await (await db()).collection("errors").insertOne({ page: new URL(request.url).pathname, kind: "ServiceError", message, service: failure.service, code: failure.code, upstreamStatus: "upstreamStatus" in failure ? failure.upstreamStatus : undefined, createdAt: new Date() }); } catch { /* The error log must not replace the original response. */ }
       }
-      return NextResponse.json({ error: message }, { status });
+      return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "private, no-store" } });
     }
   };
 }

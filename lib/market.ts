@@ -4,26 +4,18 @@ import type { Candle, Metric, Quote, Stock } from "./types";
 import { historyRange } from './trending';
 import {returnOnCapitalEmployed,annualGrowth,margin} from './financial-math';
 
-const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+import { cached } from "./request-cache";
+import { fetchUpstream, upstreamJson, UpstreamError } from "./upstream";
+export { cached } from "./request-cache";
+import { nseQuote, nseSearch, canUseNse } from "./nse-market";
+
+const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"], fetch: (input, init) => fetchUpstream("Yahoo Finance", input, init) });
 const INR = "\u20b9";
 const MULTIPLE = "\u00d7";
 
 export const universe = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "ITC", "LT", "SBIN", "BHARTIARTL", "HINDUNILVR", "AXISBANK", "KOTAKBANK", "MARUTI", "SUNPHARMA", "TITAN", "BAJFINANCE", "ASIANPAINT", "HCLTECH", "WIPRO", "TATASTEEL"];
 export const indices = ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT"];
 export function ticker(symbol: string) { return symbol.startsWith("^") || symbol.endsWith(".NS") || symbol.endsWith(".BO") ? symbol : symbol + ".NS"; }
-
-const cache = new Map<string, { data: unknown; expires: number }>();
-const pending = new Map<string,Promise<unknown>>();
-export async function cached<T>(key: string, fetcher: () => Promise<T>, ttl = 60000): Promise<T> {
-  const hit = cache.get(key);
-  if (hit && hit.expires > Date.now()) return hit.data as T;
-  if(pending.has(key))return pending.get(key) as Promise<T>;
-  const work=fetcher();pending.set(key,work);
-  let data:T;try{data=await work}finally{pending.delete(key)}
-  if (cache.size > 300) cache.delete(cache.keys().next().value!);
-  cache.set(key, { data, expires: Date.now() + ttl });
-  return data;
-}
 
 function iso(value: unknown) { if (!value) return null; const d = value instanceof Date ? value : new Date(String(value)); return Number.isFinite(d.getTime()) ? d.toISOString() : null; }
 type FundamentalRow = Record<string, unknown> & { date?: Date | number | string };
@@ -56,9 +48,7 @@ async function nseHoldingSummary(symbol: string): Promise<HoldingSummary | null>
     const clean = symbol.replace(/\.NS$/, "");
     const headers = { Accept: "application/json", "User-Agent": "Mozilla/5.0", Referer: "https://www.nseindia.com/companies-listing/corporate-filings-shareholding-pattern" };
     const masterUrl = "https://www.nseindia.com/api/corporate-share-holdings-master?index=equities&symbol=" + encodeURIComponent(clean);
-    const response = await fetch(masterUrl, { headers, signal: AbortSignal.timeout(12000) });
-    if (!response.ok) throw new Error("NSE shareholding unavailable");
-    const reports = await response.json() as FundamentalRow[];
+    const reports = await upstreamJson<FundamentalRow[]>("NSE", masterUrl, { headers });
     const latest = Array.isArray(reports) ? reports[0] : undefined;
     if (!latest) return null;
     let promoterPledge: number | null = null;
@@ -149,21 +139,29 @@ function parseFinancialRows(rows: FundamentalRow[], isQuarterly = false, shares:
 export async function quotes(symbols: string[]): Promise<Quote[]> {
   return cached("quotes:" + symbols.join(","), async () => {
     const requested = symbols.map(ticker);
-    const normalize = (q: Awaited<ReturnType<typeof yahoo.quote>>) => ({ symbol: String(q.symbol).replace(/\.NS$/, ""), name: q.shortName || q.longName || q.symbol, price: finite(q.regularMarketPrice), change: finite(q.regularMarketChange), changePercent: finite(q.regularMarketChangePercent), currency: q.currency || "INR", asOf: iso(q.regularMarketTime) });
+    const normalize = (q: Awaited<ReturnType<typeof yahoo.quote>>) => ({ symbol: String(q.symbol).replace(/\.NS$/, ""), name: q.shortName || q.longName || q.symbol, price: finite(q.regularMarketPrice), change: finite(q.regularMarketChange), changePercent: finite(q.regularMarketChangePercent), currency: q.currency || "INR", asOf: iso(q.regularMarketTime), source: "Yahoo Finance" as const });
     try {
       const result = await yahoo.quote(requested);
       return (Array.isArray(result) ? result : [result]).map(normalize);
-    } catch {
-      const settled = await Promise.allSettled(requested.map(symbol => yahoo.quote(symbol)));
+    } catch (error) {
+      // Exchange data keeps NSE stocks usable when Yahoo rejects the hosting IP.
+      // Never substitute an NSE listing for an index or a BSE-only symbol.
+      const settled = await Promise.allSettled(symbols.map(async symbol => {
+        if (canUseNse(symbol)) return nseQuote(symbol);
+        if (error instanceof UpstreamError || requested.length === 1) throw error;
+        return normalize(await yahoo.quote(ticker(symbol)));
+      }));
       const rows = settled.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
-      if (!rows.length) throw new Error("Quote unavailable");
-      return rows.map(normalize);
+      if (!rows.length) throw settled.find(result => result.status === "rejected")?.reason || error;
+      return rows;
     }
   });
 }
 
 export async function search(query: string) {
+  query = query.trim().toUpperCase();
   return cached("search:" + query, async () => {
+    try {
     const result = await yahoo.search(query, { quotesCount: 20, newsCount: 0 });
     const rows = result.quotes
       .filter(q => "symbol" in q && typeof q.symbol === "string" && /\.(NS|BO)$/.test(q.symbol))
@@ -180,6 +178,7 @@ export async function search(query: string) {
       seen.add(key);
       return true;
     }).slice(0, 10);
+    } catch { return nseSearch(query); }
   }, 3600000);
 }
 
@@ -219,7 +218,8 @@ export async function analyze(symbol: string): Promise<Stock> {
       nseHoldingSummary(symbol)
     ]);
 
-    if (quoteResult.status !== "fulfilled" || !quoteResult.value[0]) throw new Error("Quote unavailable");
+    if (quoteResult.status === "rejected") throw quoteResult.reason;
+    if (!quoteResult.value[0]) throw new UpstreamError("Yahoo Finance", "invalid_response");
 
     const q = quoteResult.value[0];
     const s = summaryResult.status === "fulfilled" ? summaryResult.value : null;
@@ -326,9 +326,14 @@ export async function analyze(symbol: string): Promise<Stock> {
         ...(annualResult.status === "rejected" ? ["Annual fundamentals fallback could not be loaded."] : []),
         ...(holdingResult.status === "rejected" ? ["Exchange shareholding could not be loaded; promoter holding is unavailable."] : []),
         ...(historyResult.status === "rejected" ? ["Price history is unavailable."] : []),
-        "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
+        q.source === "NSE"
+          ? "Yahoo Finance is unavailable. The quote comes from NSE; unavailable fundamentals and history are left blank. Verify exchange timestamps and company filings."
+          : "Data is provided by Yahoo Finance and may be delayed. Reporting periods vary by metric; verify company filings.",
         "The fundamental score is a transparent checklist, not a buy, hold or sell recommendation."
       ]
     };
   }, 300000);
 }
+
+/** Check Yahoo directly so an NSE fallback does not hide a provider outage. */
+export async function yahooHealthCheck() { await yahoo.quote("TCS.NS"); }
