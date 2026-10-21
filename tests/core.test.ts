@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { csvCell, ema, percentFraction, qualityScore, rsi, swing } from '../lib/analytics';
-import { maySignIn, normalizeEmail } from '../lib/access';
+import { googleSignupDecision, normalizeEmail } from '../lib/access';
 import { reportSchema, symbolSchema } from '../lib/validation';
 import type { Candle, Metric } from '../lib/types';
 import { parseWatchlistEntries } from '../lib/watchlist-import';
@@ -39,11 +39,16 @@ test('watchlist import keeps company names together and deduplicates entries', (
   assert.deepEqual(parseWatchlistEntries('  Tata   Consultancy Services  \r\n\r\n  E2E Networks  '), ['Tata Consultancy Services', 'E2E Networks']);
 });
 
-test('only verified Google accounts with active membership can sign in', () => {
-  assert.equal(maySignIn('google', true, true), true);
-  for (const args of [['google', false, true], ['google', true, false], ['other', true, true], ['google', 'true', true]] as const) {
-    assert.equal(maySignIn(args[0], args[1], args[2]), false);
-  }
+test('Google registers new members, resumes setup, and rejects completed or revoked accounts', () => {
+  assert.equal(googleSignupDecision(true, false), 'allow');
+  assert.equal(googleSignupDecision(true, false, { active: true }), 'allow');
+  assert.equal(googleSignupDecision(true, false, { active: true, onboardedAt: '2026-10-21T00:00:00.000Z' }), 'already-registered');
+  assert.equal(googleSignupDecision(true, false, { active: false }), 'denied');
+  assert.equal(googleSignupDecision(true, true, { active: true, onboardedAt: '2026-10-21T00:00:00.000Z' }), 'allow');
+  assert.equal(googleSignupDecision(true, true, { active: false }), 'denied');
+  assert.equal(googleSignupDecision(false, false), 'denied');
+  assert.equal(googleSignupDecision('true', false), 'denied');
+  assert.equal(googleSignupDecision(true, true), 'allow');
   assert.equal(normalizeEmail(' Owner@Example.com '), 'owner@example.com');
 });
 test('filing dates reject calendar rollover and accept leap years', () => {

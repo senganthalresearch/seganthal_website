@@ -2,7 +2,7 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "./db";
-import { maySignIn, normalizeEmail, owners } from "./access";
+import { googleSignupDecision, normalizeEmail, owners } from "./access";
 import { verifyPassword } from "./passwords";
 import type { Member } from "./types";
 
@@ -43,12 +43,24 @@ export const authOptions: NextAuthOptions = {
         }
         if (account?.provider !== "google" || (profile as { email_verified?: boolean })?.email_verified !== true) return false;
         const email = normalizeEmail(user.email);
-        if (!owners().includes(email)) {
-          await (await db()).collection("members").updateOne({ email }, { $setOnInsert: { email, username: email, authProvider: "google", name: user.name || "", role: "standard", active: true, permissions: {}, joinedAt: new Date().toISOString() } }, { upsert: true });
+        const owner = owners().includes(email);
+        const database = await db();
+        const members = database.collection<Member>("members");
+        const existing = owner ? null : await members.findOne({ email });
+        const administrator = owner || existing?.role === "admin";
+        const decision = googleSignupDecision((profile as { email_verified?: boolean })?.email_verified, administrator, existing);
+        if (decision === "already-registered") return "/login?error=AlreadyRegistered";
+        if (decision === "denied") return false;
+        if (!owner && !existing) {
+          await members.updateOne({ email }, { $setOnInsert: { email, username: email, authProvider: "google", name: user.name || "", role: "standard", active: true, permissions: {}, joinedAt: new Date().toISOString() } }, { upsert: true });
         }
-        const member = await memberFor(email);
-        if (!maySignIn(account?.provider, (profile as {email_verified?: boolean})?.email_verified, Boolean(member?.active))) return false;
-        await (await db()).collection("users").updateOne({ email: normalizeEmail(user.email) }, { $set: { name: user.name, lastLoginAt: new Date() } }, { upsert: true });
+        if (!owner) {
+          const latest = await members.findOne({ email });
+          const latestDecision = googleSignupDecision(true, latest?.role === "admin", latest);
+          if (latestDecision === "already-registered") return "/login?error=AlreadyRegistered";
+          if (latestDecision === "denied") return false;
+        }
+        await database.collection("users").updateOne({ email }, { $set: { name: user.name, lastLoginAt: new Date() } }, { upsert: true });
         return true;
       } catch { return "/login?error=ServiceUnavailable"; }
     },

@@ -33,8 +33,7 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
 
             <h2>Sign In to Terminal</h2>
             <p className="terminal-card-desc">
-              Sign in with Google or your email and site password to join today's team discussion and access holdings,
-              stock scorecards, and exchange filings.
+              Already registered? Sign in with your email and site password. New members create an account with Google once.
             </p>
 
             {(error || signInError) && (
@@ -42,6 +41,8 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
                 {signInError ||
                   (error === "ServiceUnavailable"
                     ? "The team database could not be reached. Please try again shortly or contact your administrator."
+                    : error === "AlreadyRegistered"
+                    ? "This Google account is already registered. Sign in below with your email and site password, or reset the password."
                     : error === "AccessDenied"
                     ? "This account is unavailable or its access has been revoked. Please contact your administrator."
                     : "Sign-in could not be completed. Check your connection or contact your administrator.")}
@@ -54,6 +55,9 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
               </div>
             )}
 
+            <EmailAccess emailAvailable={emailAvailable} />
+
+            <div className="email-access-signup"><h3>New member? Create your account</h3><p className="small muted">Use Google to verify your identity for first-time setup. After setup, sign in with the email and password you choose.</p></div>
             <button
               className="google-signin-btn"
               disabled={!configured || busy}
@@ -61,7 +65,7 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
                 setBusy(true);
                 setSignInError("");
                 try {
-                  await signIn("google", { callbackUrl: "/#Team%20Chat" });
+                  await signIn("google", { callbackUrl: "/complete-account" });
                 } catch {
                   setSignInError("Could not open Google sign-in. Check your connection and try again.");
                   setBusy(false);
@@ -88,11 +92,9 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
                   />
                 </svg>
               </span>
-              <span className="btn-text">{busy ? "Opening Google..." : "Continue with Google"}</span>
+              <span className="btn-text">{busy ? "Opening Google..." : "Sign up with Google"}</span>
               <ArrowUpRight size={18} className="btn-arrow" />
             </button>
-
-            <EmailAccess emailAvailable={emailAvailable} />
 
             {previewAvailable && (
               <a href="/preview" className="login-preview-action">
@@ -104,7 +106,7 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
 
             <div className="terminal-security-footer">
               <ShieldCheck size={14} />
-              <span>Google or protected email sign-in</span>
+              <span>Verified Google registration · protected email sign-in</span>
             </div>
           </section>
  </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a></footer>

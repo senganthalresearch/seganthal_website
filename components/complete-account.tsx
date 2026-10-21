@@ -30,7 +30,7 @@ export function CompleteAccount({ email, initiallyVerified, emailAvailable }: { 
     finally { setBusy(false); }
   }
 
-  return <main className="account-setup"><section className="account-setup-card"><img src="/senganthal-logo-transparent.png" alt="Senganthal" /><span className="eyebrow">ACCOUNT SETUP</span><h1>Secure your research account</h1><p>Your username is <strong>{email}</strong>. We verify this address once, then you can use Google or your email and site password to sign in.</p>
+  return <main className="account-setup"><section className="account-setup-card"><img src="/senganthal-logo-transparent.png" alt="Senganthal" /><span className="eyebrow">ACCOUNT SETUP</span><h1>Secure your research account</h1><p>Your username is <strong>{email}</strong>. Verify this address once, then sign in with this email and the site password you choose.</p>
     {!verified ? <form onSubmit={(event: FormEvent) => { event.preventDefault(); void act("verify"); }}>
       <button className="button secondary" type="button" disabled={!emailAvailable || busy} onClick={() => void act("send")}>{sent ? "Send a new code" : "Send email code"}</button>
       <label>Six-digit email code<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value)} /></label>

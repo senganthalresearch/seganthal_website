@@ -1,4 +1,8 @@
-.email-access{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}
+.email-access{margin-top:0;padding-top:0}
+.email-access-signup{border-top:1px solid var(--line);margin-top:24px;padding-top:20px}
+.email-access-signup h3{font-size:15px;margin:0 0 8px;color:var(--ink)}
+.email-access-signup p{line-height:1.6;margin:0}
+.email-access-signup+.google-signin-btn{margin-top:12px}
 .email-access-tabs{display:flex;gap:6px;flex-wrap:wrap}
 .email-access-tabs button{border:1px solid var(--line);background:var(--surface-raised);border-radius:8px;padding:8px 10px;color:var(--muted);font-size:12px;cursor:pointer}
 .email-access-tabs button[aria-selected=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
