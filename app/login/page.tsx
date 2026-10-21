@@ -13,6 +13,6 @@ export default async function LoginPage({ searchParams }: {searchParams: Promise
   } catch {
     // Keep the public login page available when the content database is offline.
   }
-  return <Login configured={configured()} error={params.error} previewAvailable={process.env.NODE_ENV === "development" || process.env.SHARE_DEMO === "true"} announcement={announcement} />;
+  return <Login configured={configured()} error={params.error} phoneAvailable={Boolean(process.env.TWOFACTOR_API_KEY)} previewAvailable={process.env.NODE_ENV === "development" || process.env.SHARE_DEMO === "true"} announcement={announcement} />;
 }
 

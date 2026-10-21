@@ -1,0 +1,10 @@
+.phone-access{border-top:1px solid #dbe4ee;margin-top:24px;padding-top:20px}
+.phone-access-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.phone-access-tabs button{border:1px solid #d8e3ed;background:#f7f9fc;border-radius:8px;padding:8px 10px;color:#516479;font-size:12px}
+.phone-access-tabs button[aria-selected=true]{background:#e8f1ff;border-color:#7fa9ed;color:#165dc0;font-weight:700}
+.phone-access label{display:grid;gap:5px;margin:12px 0;font-size:12px;color:#40546b}
+.phone-access input{border-radius:8px}
+.phone-otp-row{display:flex;align-items:flex-end;gap:8px}
+.phone-otp-row label{flex:1}
+.phone-otp-row>button{height:42px;padding:0 12px;border:1px solid #c8d8e8;background:#f2f7fc;border-radius:8px;white-space:nowrap}
+.phone-submit{width:100%;margin-top:10px}
