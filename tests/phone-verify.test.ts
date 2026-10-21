@@ -5,13 +5,18 @@ import { checkPhoneOtp, sendPhoneOtp } from "../lib/phone-verify";
 test("2Factor OTP flow uses documented GET endpoints and consumes a verified session", async () => {
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.TWOFACTOR_API_KEY;
+  const originalSmsReady = process.env.TWOFACTOR_SMS_ONLY_READY;
   const requested: Array<{ url: string; method?: string }> = [];
   process.env.TWOFACTOR_API_KEY = "test-only-key";
+  delete process.env.TWOFACTOR_SMS_ONLY_READY;
   globalThis.fetch = async (input, init) => {
     requested.push({ url: String(input), method: init?.method });
     return Response.json({ Status: "Success", Details: requested.length === 1 ? "test-session" : "OTP Matched" });
   };
   try {
+    await assert.rejects(sendPhoneOtp("+919876543210"), /SMS verification is paused/);
+    assert.equal(requested.length, 0);
+    process.env.TWOFACTOR_SMS_ONLY_READY = "true";
     await sendPhoneOtp("+919876543210");
     await checkPhoneOtp("+919876543210", "123456");
     assert.deepEqual(requested.map(item => item.method), ["GET", "GET"]);
@@ -22,5 +27,7 @@ test("2Factor OTP flow uses documented GET endpoints and consumes a verified ses
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env.TWOFACTOR_API_KEY;
     else process.env.TWOFACTOR_API_KEY = originalKey;
+    if (originalSmsReady === undefined) delete process.env.TWOFACTOR_SMS_ONLY_READY;
+    else process.env.TWOFACTOR_SMS_ONLY_READY = originalSmsReady;
   }
 });

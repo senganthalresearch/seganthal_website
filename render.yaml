@@ -26,6 +26,8 @@ services:
         sync: false
       - key: TWOFACTOR_API_KEY
         sync: false
+      - key: TWOFACTOR_SMS_ONLY_READY
+        sync: false
       - key: TWOFACTOR_TEMPLATE_NAME
         sync: false
       - key: MONGODB_LOCAL_FALLBACK

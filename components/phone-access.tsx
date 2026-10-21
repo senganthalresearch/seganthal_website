@@ -39,7 +39,7 @@ export function PhoneAccess({ available }: { available: boolean }) {
       <label>{mode === "login" ? "Password" : "Choose a password (12+ characters)"}<input required minLength={mode === "login" ? undefined : 12} maxLength={128} type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={event => setPassword(event.target.value)} /></label>
       <button className="button primary phone-submit" disabled={busy || (mode !== "login" && (!available || !sent))}>{busy ? "Please wait…" : mode === "login" ? "Sign in with mobile" : mode === "register" ? "Create account" : "Reset and sign in"}</button>
     </form>
-    {!available && mode !== "login" && <p className="small muted">Mobile verification is awaiting SMS provider setup.</p>}
+    {!available && mode !== "login" && <p className="small muted">SMS verification is paused while SMS-only delivery is being configured.</p>}
     {message && <p role="status" className="small">{message}</p>}
   </div>;
 }

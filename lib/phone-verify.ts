@@ -27,6 +27,9 @@ async function providerRequest(path: string): Promise<ProviderResult> {
 }
 
 export async function sendPhoneOtp(phone: string) {
+  if (process.env.TWOFACTOR_SMS_ONLY_READY !== "true") {
+    throw new HttpError(503, "SMS verification is paused until SMS-only delivery is confirmed.");
+  }
   // 2Factor's V1 API uses the key in its URL. Never expose or log that URL.
   const number = phone;
   const template = process.env.TWOFACTOR_TEMPLATE_NAME?.trim();
