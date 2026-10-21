@@ -31,6 +31,7 @@ async function ensureIndexes(database: Db) {
     database.collection("transactions").createIndex({owner:1,id:1},{unique:true}),
     database.collection("ledgers").createIndex({owner:1},{unique:true}),
     database.collection("rateLimits").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    database.collection("phoneOtpSessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     database.collection("reports").createIndex({ owner: 1, symbol: 1, period: 1 }, { unique: true }),
     database.collection("watchlist").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("portfolio").createIndex({ owner: 1, symbol: 1 }, { unique: true }),

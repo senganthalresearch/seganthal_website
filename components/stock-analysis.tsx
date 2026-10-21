@@ -7,6 +7,7 @@ import { scorePoints, scoreRules } from "@/lib/analytics";
 import type { Metric, Stock, WatchItem, FinancialStatementRow } from "@/lib/types";
 import { CompanyLogo } from "./company-logo";
 import { Change, metricValue, money, number, Notice, request } from "./ui";
+import { PriceChart } from "./research-charts";
 
 type Props = { stock: Stock; preview: boolean; watchlist: WatchItem[]; group: string; onGroup: (value: string) => void; onAdd: () => void; onAnalyze: (symbol: string) => void; onFilings: () => void; canSave: boolean; canExport: boolean };
 type Holdings = { current: { period: string; FII: number | null; DII: number | null; HNI: number | null; promoterHolding: number | null; promoterPledge: number | null }; sourceUrl: string };
@@ -277,6 +278,12 @@ export function StockAnalysis({ stock, preview, watchlist, group, onGroup, onAdd
         <strong>{stock.score ?? "-"}<small>/100</small></strong>
         <span>{stock.coverage} of {scoreRules.length} factors available</span>
       </div>
+    </section>
+
+    <section className="panel analyser-price-history" aria-label={`${stock.name} price history`}>
+      <div className="panel-heading"><div><h2>Price history</h2><p className="small muted">Daily exchange prices · move across the chart to inspect each session</p></div></div>
+      <PriceChart history={stock.history} label={`${stock.symbol} daily price`} />
+      <p className="research-source">Historical daily prices from Yahoo Finance. Quotes may be delayed.</p>
     </section>
 
     {/* Consolidated Scorecard Ratios & Ideal Ranges Panel */}

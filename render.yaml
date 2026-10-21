@@ -36,11 +36,9 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
-      - key: TWILIO_ACCOUNT_SID
+      - key: TWOFACTOR_API_KEY
         sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_VERIFY_SERVICE_SID
+      - key: TWOFACTOR_TEMPLATE_NAME
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false

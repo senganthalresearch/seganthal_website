@@ -186,8 +186,19 @@ export async function history(symbol: string): Promise<Candle[]> {
   return cached("history:" + symbol, async () => {
     const period1 = new Date();
     period1.setFullYear(period1.getFullYear() - 2);
-    const result = await yahoo.chart(ticker(symbol), { period1, interval: "1d" });
-    return result.quotes.filter(q => finite(q.close) !== null).map(q => ({ date: q.date.toISOString(), close: q.close!, high: finite(q.high) ?? undefined, low: finite(q.low) ?? undefined, volume: q.volume || 0 }));
+    try {
+      const result = await yahoo.chart(ticker(symbol), { period1, interval: "1d" });
+      const rows = result.quotes.filter(q => finite(q.close) !== null).map(q => ({ date: q.date.toISOString(), open: finite(q.open) ?? undefined, close: q.close!, high: finite(q.high) ?? undefined, low: finite(q.low) ?? undefined, volume: q.volume || 0 }));
+      if (rows.length >= 2) return rows;
+    } catch (error) {
+      if (!symbol.startsWith("^")) throw error;
+    }
+    const index = ({ "^NSEI": "NIFTY 50", "^NSEBANK": "NIFTY BANK", "^CNXIT": "NIFTY IT" } as Record<string, string>)[symbol];
+    if (!index) throw new UpstreamError("Yahoo Finance", "invalid_response");
+    const { historicalIndexRows } = await import("./dashboard-data");
+    const fallback = await historicalIndexRows(index);
+    if (fallback.length < 2) throw new UpstreamError("NSE", "invalid_response");
+    return fallback;
   }, 300000);
 }
 

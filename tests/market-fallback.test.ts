@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { analyze, search, yahooHealthCheck } from "../lib/market";
+import { analyze, history, search, yahooHealthCheck } from "../lib/market";
 import { canUseNse, parseNseQuote, parseNseSearch } from "../lib/nse-market";
 
 const equity = (symbol = "OUTAGECHECK") => ({ equityResponse: [{
@@ -43,4 +43,21 @@ test("search and analysis stay usable when Yahoo is rate limited; missing fundam
   assert.deepEqual(stock.history, []);
   assert.ok(stock.warnings.some(warning => warning.includes("quote comes from NSE")));
   await assert.rejects(yahooHealthCheck());
+});
+
+test("index history falls back to NSE daily prices when Yahoo rejects the request", async t => {
+  t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.hostname.endsWith("yahoo.com")) return new Response("Unavailable", { status: 429 });
+    if (url.pathname.includes("indicesHistory")) return Response.json({ data: [
+      { EOD_TIMESTAMP: "19-Oct-2026", EOD_OPEN_INDEX_VAL: "22,990", EOD_HIGH_INDEX_VAL: "23,020", EOD_LOW_INDEX_VAL: "22,830", EOD_CLOSE_INDEX_VAL: "22,888.95" },
+      { EOD_TIMESTAMP: "20-Oct-2026", EOD_OPEN_INDEX_VAL: "22,890", EOD_HIGH_INDEX_VAL: "23,010", EOD_LOW_INDEX_VAL: "22,810", EOD_CLOSE_INDEX_VAL: "22,970.15" }
+    ] });
+    throw new Error("Unexpected provider request: " + url.pathname);
+  });
+  const rows = await history("^CNXIT");
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].close, 22888.95);
+  assert.equal(rows[0].high, 23020);
+  assert.equal(rows[1].open, 22890);
 });

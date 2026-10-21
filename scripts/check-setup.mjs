@@ -8,6 +8,11 @@ for (const key of required) {
   if (!present) failed = true;
 }
 console.log('OK PDF extraction runs locally in the browser; no paid provider required');
+for (const key of ['TWOFACTOR_API_KEY', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_PLAN_ID', 'RAZORPAY_WEBHOOK_SECRET']) {
+  const present = Boolean(process.env[key]?.trim());
+  console.log(`${present ? 'OK' : 'PENDING'} ${key}`);
+  if (!present && process.argv.includes('--launch')) failed = true;
+}
 if (process.env.NEXTAUTH_URL) {
   try {
     const url = new URL(process.env.NEXTAUTH_URL);

@@ -40,18 +40,18 @@ export async function indexConstituents(index = "NIFTY TOTAL MKT") {
 }
 
 const snapshotIndices = [
-  { name: "NIFTY 50", yahoo: ["^NSEI", "NIFTYBEES.NS"], aliases: ["NIFTY 50"] },
-  { name: "SENSEX", yahoo: ["^BSESN", "SENSEXETF.BO"], aliases: ["SENSEX", "S&P BSE SENSEX"] },
-  { name: "NIFTY BANK", yahoo: ["^NSEBANK", "BANKBEES.NS"], aliases: ["NIFTY BANK", "NIFTY BANK INDEX"] },
-  { name: "NIFTY IT", yahoo: ["^CNXIT", "ITBEES.NS"], aliases: ["NIFTY IT"] },
-  { name: "NIFTY AUTO", yahoo: ["^CNXAUTO", "AUTOBEES.NS"], aliases: ["NIFTY AUTO"] },
-  { name: "NIFTY PHARMA", yahoo: ["^CNXPHARMA", "PHARMABEES.NS"], aliases: ["NIFTY PHARMA", "NIFTY HEALTHCARE INDEX"] },
-  { name: "NIFTY FMCG", yahoo: ["^CNXFMCG", "HNGSNGBEES.NS"], aliases: ["NIFTY FMCG"] },
-  { name: "NIFTY METAL", yahoo: ["^CNXMETAL", "METALBEES.NS"], aliases: ["NIFTY METAL"] },
-  { name: "NIFTY NEXT 50", yahoo: ["^NSMIDCP", "JUNIORBEES.NS"], aliases: ["NIFTY NEXT 50"] },
-  { name: "NIFTY 100", yahoo: ["^CNX100", "SETFNIF100.NS"], aliases: ["NIFTY 100"] },
-  { name: "NIFTY MIDCAP 100", yahoo: ["MIDCAPETF.NS", "MOM100.NS"], aliases: ["NIFTY MIDCAP 100", "NIFTY MIDCAP100"] },
-  { name: "NIFTY SMALLCAP 100", yahoo: ["SETFSMALL.NS", "SMALLCAP.NS"], aliases: ["NIFTY SMALLCAP 100", "NIFTY SMLCAP 100", "NIFTY SMALLCAP100"] }
+  { name: "NIFTY 50", yahoo: ["^NSEI"], aliases: ["NIFTY 50"] },
+  { name: "SENSEX", yahoo: ["^BSESN"], aliases: ["SENSEX", "S&P BSE SENSEX"] },
+  { name: "NIFTY BANK", yahoo: ["^NSEBANK"], aliases: ["NIFTY BANK", "NIFTY BANK INDEX"] },
+  { name: "NIFTY IT", yahoo: ["^CNXIT"], aliases: ["NIFTY IT"] },
+  { name: "NIFTY AUTO", yahoo: ["^CNXAUTO"], aliases: ["NIFTY AUTO"] },
+  { name: "NIFTY PHARMA", yahoo: ["^CNXPHARMA"], aliases: ["NIFTY PHARMA", "NIFTY HEALTHCARE INDEX"] },
+  { name: "NIFTY FMCG", yahoo: ["^CNXFMCG"], aliases: ["NIFTY FMCG"] },
+  { name: "NIFTY METAL", yahoo: ["^CNXMETAL"], aliases: ["NIFTY METAL"] },
+  { name: "NIFTY NEXT 50", yahoo: ["^NSMIDCP"], aliases: ["NIFTY NEXT 50"] },
+  { name: "NIFTY 100", yahoo: ["^CNX100"], aliases: ["NIFTY 100"] },
+  { name: "NIFTY MIDCAP 100", yahoo: [], aliases: ["NIFTY MIDCAP 100", "NIFTY MIDCAP100"] },
+  { name: "NIFTY SMALLCAP 100", yahoo: [], aliases: ["NIFTY SMALLCAP 100", "NIFTY SMLCAP 100", "NIFTY SMALLCAP100"] }
 ] as const;
 
 async function snapshotFallback(symbols: readonly string[]) {
@@ -76,7 +76,7 @@ export async function snapshot(): Promise<{ quotes: Quote[]; source: string; fet
     const price = numeric(r?.last) ?? fallback?.price ?? null, prev = numeric(r?.previousClose);
     return { symbol: index.name, name: index.name, price, change: price !== null && prev !== null ? price - prev : fallback?.change ?? null, changePercent: numeric(r?.percChange) ?? fallback?.changePercent ?? null, asOf: nseTime(r?.timeVal) ?? fallback?.asOf ?? null, currency: "INR" };
   });
-  return { quotes: rows, source: "NSE indices with Yahoo Finance index / ETF fallback", fetchedAt: new Date().toISOString() };
+  return { quotes: rows, source: "NSE indices with Yahoo Finance index fallback", fetchedAt: new Date().toISOString() };
 }
 
 export async function flows() {
@@ -167,7 +167,7 @@ function nseDate(value: unknown) {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
-async function historicalIndexRows(index: string) {
+export async function historicalIndexRows(index: string) {
   const to = new Date();
   const from = new Date();
   from.setDate(from.getDate() - 760);
@@ -187,7 +187,7 @@ async function historicalIndexRows(index: string) {
     const close = numeric(row.EOD_CLOSE_INDEX_VAL);
     if (!date || close === null || close <= 0 || seen.has(date.slice(0, 10))) return [];
     seen.add(date.slice(0, 10));
-    return [{ date, close }];
+    return [{ date, close, open: numeric(row.EOD_OPEN_INDEX_VAL) ?? undefined, high: numeric(row.EOD_HIGH_INDEX_VAL) ?? undefined, low: numeric(row.EOD_LOW_INDEX_VAL) ?? undefined, volume: 0 }];
   }).sort((a, b) => a.date.localeCompare(b.date));
 }
 
