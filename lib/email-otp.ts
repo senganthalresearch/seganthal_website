@@ -13,6 +13,20 @@ function digest(purpose: Purpose, email: string, code: string) {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET || "").update(`${purpose}\0${email}\0${code}`).digest("hex");
 }
 
+function emailContent(purpose: Purpose, code: string) {
+  const resetting = purpose === "reset";
+  const subject = resetting ? "Reset your Senganthal password" : "Verify your Senganthal email";
+  const heading = resetting ? "Reset your password" : "Verify your email";
+  const instruction = resetting
+    ? "Use this code to choose a new Senganthal password."
+    : "Use this code to finish setting up your Senganthal account.";
+  return {
+    subject,
+    text: `${heading}\n\n${instruction}\n\nYour code: ${code}\n\nThis code expires in 10 minutes. Never share it with anyone. If you did not request it, you can ignore this email.`,
+    html: `<!doctype html><html lang="en"><body style="margin:0;padding:32px 16px;background:#f3f6fb;font-family:Arial,sans-serif;color:#16243a"><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:520px;margin:0 auto;background:#fff;border:1px solid #dfe7f1;border-radius:14px"><tr><td style="padding:28px"><p style="margin:0 0 20px;color:#165dc0;font-size:13px;font-weight:700;letter-spacing:2px">SENGANTHAL</p><h1 style="margin:0 0 12px;font-size:25px;line-height:1.25;color:#16243a">${heading}</h1><p style="margin:0 0 20px;font-size:15px;line-height:1.6">${instruction}</p><p style="margin:0 0 20px;padding:18px;background:#eef4ff;border-radius:10px;text-align:center;color:#153d85;font-size:32px;font-weight:700;letter-spacing:8px">${code}</p><p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#53647d">This code expires in 10 minutes. Never share it with anyone.</p><p style="margin:0;font-size:13px;line-height:1.6;color:#53647d">If you did not request this, you can safely ignore this email.</p></td></tr></table></body></html>`
+  };
+}
+
 async function rateLimit(key: string, limit: number, periodMs: number) {
   const bucket = Math.floor(Date.now() / periodMs);
   const result = await (await db()).collection<{_id:string;count:number;expiresAt:Date}>("rateLimits").findOneAndUpdate(
@@ -29,6 +43,7 @@ export async function sendEmailOtp(purpose: Purpose, email: string, ip: string) 
   await rateLimit(`email:${email}`, 5, 3600000);
   await rateLimit("global", 100, 86400000);
   const code = randomInt(0, 1000000).toString().padStart(6, "0");
+  const content = emailContent(purpose, code);
   const collection = (await db()).collection<Challenge>("emailOtpChallenges");
   const id = `${purpose}:${email}`;
   const codeHash = digest(purpose, email, code);
@@ -41,8 +56,7 @@ export async function sendEmailOtp(purpose: Purpose, email: string, ip: string) 
       body: JSON.stringify({
         from: process.env.EMAIL_OTP_FROM,
         to: [email],
-        subject: purpose === "onboarding" ? "Your Senganthal verification code" : "Reset your Senganthal password",
-        text: `Your Senganthal verification code is ${code}. It expires in 10 minutes. If you did not request this code, you can ignore this email.`
+        ...content
       }),
       cache: "no-store",
       signal: AbortSignal.timeout(10000)
