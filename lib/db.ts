@@ -35,9 +35,8 @@ async function ensureIndexes(database: Db) {
     database.collection("watchlist").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("portfolio").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("members").createIndex({ email: 1 }, { unique: true }),
-    database.collection("members").createIndex({ phone: 1 }, { unique: true, sparse: true }),
-    database.collection("phoneCredentials").createIndex({ email: 1 }, { unique: true }),
-    database.collection("phoneOtpSessions").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    database.collection("emailCredentials").createIndex({ email: 1 }, { unique: true }),
+    database.collection("emailOtpChallenges").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     database.collection("messages").createIndex({ createdAt: -1 }),
     database.collection("settings").createIndex({ key: 1 }, { unique: true }),
     database.collection("stakeScans").createIndex({ owner: 1 }, { unique: true }),
@@ -57,6 +56,7 @@ function matches<T extends StoredDocument>(doc: T, query: Query<T>) {
     const currentValue = comparable(current);
     if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)) {
       const operators = value as Record<string, unknown>;
+      if ("$exists" in operators && (current !== undefined) !== operators.$exists) return false;
       if ("$ne" in operators && current === operators.$ne) return false;
       if ("$lt" in operators && !(currentValue < comparable(operators.$lt))) return false;
       if ("$lte" in operators && !(currentValue <= comparable(operators.$lte))) return false;

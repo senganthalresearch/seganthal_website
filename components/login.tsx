@@ -5,10 +5,10 @@ import { ArrowUpRight, ArrowRight, ChevronDown, Phone, MessageCircle, ShieldChec
 import { ThemeToggle } from "./theme";
 import { ResearchIcon, ResearchIllustration, PatternDrawing } from "./research-art";
 import { HomeAnnouncement } from "./home-announcement";
-import { PhoneAccess } from "./phone-access";
+import { EmailAccess } from "./email-access";
 import type { AnnouncementContent } from "@/lib/site-settings";
 const whatsapp="https://wa.me/919025839615?text=Hello%2C%20I%20would%20like%20details%20about%20the%20Senganthal%20fundamental%20analysis%20classes.";
-export default function Login({configured,error,phoneAvailable,previewAvailable,announcement}:{configured:boolean;error?:string;phoneAvailable:boolean;previewAvailable:boolean;announcement:AnnouncementContent}) {
+export default function Login({configured,error,emailAvailable,previewAvailable,announcement}:{configured:boolean;error?:string;emailAvailable:boolean;previewAvailable:boolean;announcement:AnnouncementContent}) {
  const [busy,setBusy]=useState(false),[signInError,setSignInError]=useState(''),[explore,setExplore]=useState(false),[banner,setBanner]=useState(true),[query,setQuery]=useState('');
  const menu=useRef<HTMLDivElement>(null);
  useEffect(()=>{function close(e:KeyboardEvent){if(e.key==='Escape')setExplore(false)}function outside(e:PointerEvent){if(menu.current&&!menu.current.contains(e.target as Node))setExplore(false)}document.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{document.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside)}},[]);
@@ -33,7 +33,7 @@ export default function Login({configured,error,phoneAvailable,previewAvailable,
 
             <h2>Sign In to Terminal</h2>
             <p className="terminal-card-desc">
-              Sign in with Google or a verified mobile account to join today's team discussion and access holdings,
+              Sign in with Google or your email and site password to join today's team discussion and access holdings,
               stock scorecards, and exchange filings.
             </p>
 
@@ -92,7 +92,7 @@ export default function Login({configured,error,phoneAvailable,previewAvailable,
               <ArrowUpRight size={18} className="btn-arrow" />
             </button>
 
-            <PhoneAccess available={phoneAvailable} />
+            <EmailAccess emailAvailable={emailAvailable} />
 
             {previewAvailable && (
               <a href="/preview" className="login-preview-action">
@@ -104,7 +104,7 @@ export default function Login({configured,error,phoneAvailable,previewAvailable,
 
             <div className="terminal-security-footer">
               <ShieldCheck size={14} />
-              <span>Google or protected mobile sign-in</span>
+              <span>Google or protected email sign-in</span>
             </div>
           </section>
  </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/login"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a></footer>

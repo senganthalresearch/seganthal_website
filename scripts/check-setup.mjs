@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 
-const required = ['NEXTAUTH_URL', 'NEXTAUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MONGODB_URI', 'ADMIN_EMAILS'];
+const required = ['NEXTAUTH_URL', 'NEXTAUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'MONGODB_URI', 'ADMIN_EMAILS', 'RESEND_API_KEY', 'EMAIL_OTP_FROM'];
 let failed = false;
 for (const key of required) {
   const present = Boolean(process.env[key]?.trim());
@@ -52,5 +52,5 @@ if (process.argv.includes('--market')) {
     console.log('OK Market news feed');
   } catch { console.log('FAILED Market news feed. Retry later or check network connectivity.'); failed = true; }
 }
-console.log('Google sign-in must also be checked in the browser with an approved account.');
+console.log('Google sign-in and email code delivery must also be checked with a non-admin account in the browser.');
 process.exitCode = failed ? 1 : 0;
