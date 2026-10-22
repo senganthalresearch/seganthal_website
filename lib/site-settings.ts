@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 export const roleSchema = z.enum(['admin', 'full', 'standard', 'viewer', 'member']);
 export const permissionsSchema = z.object({ analyze:z.boolean().optional(),watchlist:z.boolean().optional(),chat:z.boolean().optional(),reports:z.boolean().optional(),swing:z.boolean().optional(),export:z.boolean().optional(),aboutEdit:z.boolean().optional() });
 export const memberSchema = z.object({email:z.string().trim().toLowerCase().pipe(z.email()),name:z.string().trim().max(100).default(''),role:roleSchema,active:z.boolean(),permissions:permissionsSchema.default({})});
@@ -12,7 +12,7 @@ export type BannerContent = z.infer<typeof bannerSchema>;
 export type AnnouncementContent = z.infer<typeof announcementSchema>;
 export type SiteSettings = {about:AboutContent;banner:BannerContent;announcement:AnnouncementContent;updatedAt?:string};
 export const defaultSettings:SiteSettings = {
- about:{founderName:'Senganthal',founderTitle:'Research community',photo:'',tagline:'சேர்ந்து கற்போம், சேர்ந்து வளர்வோம்',story:'Senganthal brings market data, company information and personal research tools together for independent learning.',journey:'',members:'',founded:'',programs:'',offers:'Company financial information\nHistorical price charts\nFinancial ratios and screening tools\nPersonal watchlists and research notes',quotes:'சேர்ந்து கற்போம், சேர்ந்து வளர்வோம்.',closing:'Explore the tools, verify the sources and make your own decisions.'},
+ about:{founderName:'Jayamohan Sundararaj',founderTitle:'Website administrator',photo:'/founder-reference.jpg',tagline:'சேர்ந்து கற்போம், சேர்ந்து வளர்வோம்',story:'Senganthal brings market data, company information and personal research tools together for independent learning.',journey:'',members:'',founded:'',programs:'',offers:'Company financial information\nHistorical price charts\nFinancial ratios and screening tools\nPersonal watchlists and research notes',quotes:'சேர்ந்து கற்போம், சேர்ந்து வளர்வோம்.',closing:'Explore the tools, verify the sources and make your own decisions.'},
  banner:{enabled:true,text:'சேர்ந்து கற்போம், முதலீடு செய்வோம், சேர்ந்து வளர்வோம்!',colorStart:'#0f766e',colorEnd:'#4338ca',textColor:'#ffffff',speed:35,scroll:false,startsAt:'',endsAt:''},
  announcement:{enabled:true,title:'Stock market classes',description:'Learn market structure, company fundamentals, risk management and portfolio building with our Tamil research community.',image:'/class-announcement.jpg',linkLabel:'Enquire about classes',linkUrl:'https://wa.me/919025839615'}
 };
