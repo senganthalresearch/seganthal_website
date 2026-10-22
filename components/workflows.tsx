@@ -287,7 +287,6 @@ function SwingBucket({ title, rows, tone, empty }: { title: string; rows: SwingR
 }
 
 function SwingCard({ row }: { row: SwingResult }) {
-  const target = row.trade?.targetLow !== null && row.trade?.targetLow !== undefined && row.trade?.targetHigh !== null && row.trade?.targetHigh !== undefined ? "Rs " + number(row.trade.targetLow, 0) + " - " + number(row.trade.targetHigh, 0) : "-";
   return <details className="swing-card">
     <summary><span>{row.symbol} - {String(row.signal || "Setup").toUpperCase()} - Rs {number(row.close)}</span><small>RSI {number(row.rsi, 1)} - Vol {number(row.volumeRatio)}x</small></summary>
     <div className="swing-card-body">
@@ -300,13 +299,7 @@ function SwingCard({ row }: { row: SwingResult }) {
         <Rule ok={row.checks?.rsiHealthy} text="RSI in 45-70 sweet spot" />
         <Rule ok={row.rsi !== null && row.rsi !== undefined && row.rsi < 80} text="RSI below overheated zone" />
       </ul>
-      <div className="swing-trade-grid">
-        <div><span>Entry</span><strong>Rs {number(row.trade?.entry)}</strong><em>Latest close</em></div>
-        <div><span>Stop loss</span><strong>Rs {number(row.trade?.stopLoss)} <small>{lossPct(row)}</small></strong><em>Entry - (2 x ATR 14)</em></div>
-        <div><span>Target</span><strong>{target}</strong><em>Entry x 1.08 to Entry x 1.12</em></div>
-        <div><span>Risk/reward</span><strong>1:{number(row.trade?.riskReward, 2)}</strong><em>(Target - entry) / (Entry - stop)</em></div>
-      </div>
-      <p className="small muted">Trailing stop: once in profit, exit if price closes below EMA21. If RSI moves above 70, tighten the trail.</p>
+      <p className="small muted">This card reports historical price, volume and indicator conditions. It does not calculate an entry, exit or target price.</p>
     </div>
   </details>;
 }
@@ -315,10 +308,6 @@ function Rule({ ok, text }: { ok?: boolean; text: string }) {
   return <li className={ok ? "pass" : "fail"}><span>{ok ? "Pass" : "Not met"}</span>{text}</li>;
 }
 
-function lossPct(row: SwingResult) {
-  const entry = row.trade?.entry, stop = row.trade?.stopLoss;
-  return entry !== null && entry !== undefined && stop !== null && stop !== undefined && entry > 0 ? "(" + number((stop / entry - 1) * 100, 1) + "%)" : "";
-}
 
 const numericFields = [["revenue", "Revenue"], ["netProfit", "Net profit"], ["operatingCashFlow", "Operating cash flow"], ["totalDebt", "Total debt"], ["equity", "Equity"]] as const;
 

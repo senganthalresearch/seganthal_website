@@ -28,6 +28,10 @@ Do not deploy this branch to the live site until email delivery works. New Googl
 
 ## Razorpay website review account
 
-For a reviewer who needs a username and password, create a dedicated **non-admin** Google account, complete the Senganthal onboarding with its email code, and test the site's email and password login. Give Razorpay only that Senganthal site's email username and password through Razorpay's official verification form. Do not share the Google account password, an OTP, or an admin account. Disable the reviewer account in Admin after the review.
+Use the isolated reviewer identity, not a normal member or administrator. Run `node scripts/create-reviewer.mjs` locally. This creates a random password and salted scrypt hash in the ignored `.data/razorpay-reviewer-credentials.txt` file without printing secrets. It refuses to overwrite an existing file. The email-shaped username is a demo identity, not a mailbox; it requires no Google account or email OTP.
+
+Privately copy the four `REVIEWER_*` environment values from that file into Render. Deploy, then test the username/password on `/login`. The session opens the labelled sample-data workspace and receives HTTP 403 from member/admin APIs. It cannot read production chats, portfolios or users. It expires after 14 days; setting `REVIEWER_LOGIN_ENABLED=false`, changing the hash or expiry, or removing configuration invalidates reviewer sessions. Do not put this identity in `ADMIN_EMAILS` or create it as a normal member.
+
+Provide only the SITE username/password through Razorpay's official verification form. Never provide an administrator account, Google password, OTP, API key or password hash. Explain that it is an isolated sample-data demo and has no live checkout. Disable it after review, redeploy and delete the private local credentials file when no longer needed.
 
 The Razorpay website form should use `https://www.senganthal.co.in/` and answer **Yes** when asked whether users must log in. Confirm that the site's payment, pricing, refund and cancellation terms accurately describe the eventual paid product before enabling live charges. Payment integration is a separate release; this authentication change does not activate subscriptions.

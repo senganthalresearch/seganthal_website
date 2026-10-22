@@ -7,6 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function CompleteAccountPage() {
   const member = await currentMember();
   if (!member) redirect("/login");
-  if (member.role === "admin" || member.onboardedAt) redirect("/");
+  if (member.reviewDemo || member.role === "admin" || member.onboardedAt) redirect("/");
   return <CompleteAccount email={member.email} initiallyVerified={Boolean(member.emailVerifiedAt)} emailAvailable={emailDeliveryConfigured()} />;
 }

@@ -48,6 +48,7 @@ export function AboutUs({ content, mode = "section" }: { content: AboutContent; 
   const offers = compactLines(content.offers);
   const quotes = compactLines(content.quotes);
   const timeline = journeyItems(content.journey);
+  const stats = [[content.members, "Members"], [content.founded, "Founded"], [content.programs, "Programs"]].filter(([value]) => Boolean(value?.trim()));
   const story = content.story || "Our story is being prepared. Come back soon to learn how our community began.";
   const rootClass = [styles.aboutStory, styles[mode]].join(" ");
 
@@ -80,25 +81,21 @@ export function AboutUs({ content, mode = "section" }: { content: AboutContent; 
             {content.photo ? <img src={content.photo} alt={content.founderName} /> : <span className={styles.founderAvatar}><Users size={40} /></span>}
           </div>
           <div className={styles.founderIdentity}>
-            <span>Founder</span>
+            <span>Community</span>
             <h3>{content.founderName}</h3>
             <p>{content.founderTitle}</p>
           </div>
         </div>
       </header>
 
-      <section className={styles.statsStrip} aria-label="Community highlights">
-        {[
-          [content.members, "Members"],
-          [content.founded, "Founded"],
-          [content.programs, "Programs"],
-        ].map(([value, label]) => (
+      {stats.length > 0 && <section className={styles.statsStrip} aria-label="Community highlights">
+        {stats.map(([value, label]) => (
           <div key={label}>
             <strong>{value}</strong>
             <span>{label}</span>
           </div>
         ))}
-      </section>
+      </section>}
 
       <div className={styles.contentGrid}>
         <section className={styles.storySection}>

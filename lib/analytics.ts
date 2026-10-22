@@ -80,27 +80,19 @@ export function swing(history: Candle[], longTerm = false) {
   const close = history.at(-1)?.close ?? null;
   const previous = history.at(-2)?.close ?? close;
   const changePercent = close !== null && previous !== null && previous > 0 ? (close / previous - 1) * 100 : null;
-  const recent = history.slice(-10).map(c => c.close);
-  const volatility = atr(history);
-  const entry = close;
-  const stopLoss = close !== null && volatility !== null ? close - 2 * volatility : null;
-  const targetLow = close !== null ? close * 1.08 : null;
-  const targetHigh = close !== null ? close * 1.12 : null;
-  const riskReward = entry !== null && stopLoss !== null && targetLow !== null && entry > stopLoss ? (targetLow - entry) / (entry - stopLoss) : null;
   return {
     fast: a,
     slow: b,
     rsi: momentum,
     volumeRatio,
     volumeTrendRatio,
-    atr: volatility,
+    atr: atr(history),
     signal: a === null || b === null ? "Insufficient history" : crossed ? (volumeConfirmed ? "Golden cross today" : "Bullish cross today") : crossedYesterday ? "Crossed yesterday" : approaching ? "Approaching golden cross" : trendUp ? "Above trend" : "Below trend",
     asOf: history.at(-1)?.date || null,
     close,
     changePercent,
     gapPercent,
     setup: crossed ? "today" as const : crossedYesterday ? "yesterday" as const : approaching ? "approaching" as const : "none" as const,
-    trade: { entry, stopLoss, targetLow, targetHigh, riskReward },
     checks: {
       trendUp,
       crossed,

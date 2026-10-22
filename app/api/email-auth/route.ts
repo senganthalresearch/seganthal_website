@@ -24,13 +24,14 @@ function requestIp(request: Request) {
 
 async function pendingMember() {
   const member = await currentMember();
-  if (!member || member.role === "admin" || !member.active) throw new HttpError(401, "Sign in with Google to set up your account.");
+  if (!member || member.reviewDemo || member.role === "admin" || !member.active) throw new HttpError(401, "Sign in with Google to set up your account.");
   return member;
 }
 
 export const POST = api(async request => {
   checkOrigin(request);
   const body = input.parse(await request.json());
+  const onboardingMember = body.action === "reset-send" || body.action === "reset" ? null : await pendingMember();
   const database = await db();
   if (body.action === "reset-send") {
     const bucket = Math.floor(Date.now() / 3600000);
@@ -56,7 +57,8 @@ export const POST = api(async request => {
     await database.collection("audit").insertOne({ action: "email.password.reset", target: address, createdAt: new Date() });
     return { ok: true };
   }
-  const member = await pendingMember();
+  const member = onboardingMember;
+  if (!member) throw new HttpError(401, "Sign in with Google to set up your account.");
   if (body.action === "send") {
     if (member.emailVerifiedAt) throw new HttpError(409, "Your email is already verified.");
     await sendEmailOtp("onboarding", member.email, requestIp(request));

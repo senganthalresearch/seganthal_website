@@ -84,6 +84,7 @@ test('volume confirmation uses the previous twenty sessions and a new cross', ()
   assert.equal(swing(candles).signal, 'Golden cross today');
   assert.equal(swing(candles).setup, 'today');
   assert.equal(swing(candles).volumeRatio, 1.5);
+  assert.equal('trade' in swing(candles), false, 'market observations must not publish generated entry, stop-loss or target prices');
   assert.equal(swing(candles, true).signal, 'Insufficient history');
   candles.push({ date: '2026-01-23', close: 111, volume: 200 });
   assert.equal(swing(candles).signal, 'Crossed yesterday');

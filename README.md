@@ -20,7 +20,7 @@ Keep credentials in `.env.local`; never commit or share that file. Copy `.env.ex
 
 Required settings: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MONGODB_URI`, and comma-separated `ADMIN_EMAILS`. `MONGODB_DB` defaults to `senganthal`.
 
-Google OAuth must permit the callback URL `<NEXTAUTH_URL>/api/auth/callback/google`. A new Google user verifies their email with a one-time code, enters a contact mobile number, and chooses a site password. Returning users can use Google directly or their verified email and site password. Owners in `ADMIN_EMAILS` retain administrator access. Database access is checked on protected requests, so revoking a member takes effect without waiting for their session to expire.
+Google OAuth must permit the callback URL `<NEXTAUTH_URL>/api/auth/callback/google`. A new Google user verifies their email with a one-time code, enters a contact mobile number, and chooses a site password. Returning members use their verified email and site password; Google registration tells completed non-admin accounts to sign in with those credentials. Owners in `ADMIN_EMAILS` retain Google administrator access. Database access is checked on protected requests, so revoking a member takes effect without waiting for their session to expire.
 
 Email delivery also requires `RESEND_API_KEY` and `EMAIL_OTP_FROM` with a verified sending domain. See [email authentication setup](docs/email-auth.md) before deploying the new login flow. The old phone OTP provider is no longer used.
 

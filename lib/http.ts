@@ -9,6 +9,7 @@ export class HttpError extends Error { constructor(public status: number, messag
 export async function requireMember(admin = false) {
   const member = await currentMember();
   if (!member) throw new HttpError(401, "Sign in to your account to continue.");
+  if (member.reviewDemo) throw new HttpError(403, "The reviewer demo uses sample data only. Member APIs are unavailable.");
   if (member.role !== "admin" && (!member.emailVerifiedAt || !member.onboardedAt)) throw new HttpError(403, "Complete email verification to use the workspace.");
   if (admin && member.role !== "admin") throw new HttpError(403, "Administrator access required.");
   return member;

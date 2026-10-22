@@ -313,7 +313,7 @@ export default function Terminal({ member, preview = false }: { member: Member; 
 
   const visibleWatchlist = watchlist.filter(i => (group === "All groups" || i.group === group) && (i.name + i.symbol).toLowerCase().includes(watchQuery.toLowerCase()));
   const exitLabel = preview ? "Exit preview" : "Logout";
-  const leaveWorkspace = () => preview ? window.location.assign("/login") : void signOut({ callbackUrl: "/login" });
+  const leaveWorkspace = () => preview && !member.reviewDemo ? window.location.assign("/login") : void signOut({ callbackUrl: "/login" });
   const displayName = currentMember.name?.trim() || currentMember.email.split("@")[0];
   const initials = displayName.split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
   const visibleNavigation = navigation.filter(item => item.name === "Admin" ? currentMember.role === "admin" : item.name === "Stock Analyzer" ? can(currentMember, "analyze") : item.name === "PDF Upload" ? currentMember.role === "admin" : item.name === "Swing Trade" ? can(currentMember, "swing") : true);

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tests/tsconfig.json && node --test .test-build/tests/*.test.js",
+    "test": "node scripts/clean-test-build.mjs && tsc -p tests/tsconfig.json && node --test .test-build/tests/*.test.js",
+    "check:public": "node scripts/check-public-pages.mjs",
     "check:setup": "node --env-file-if-exists=.env.local scripts/check-setup.mjs"
   },
   "dependencies": {

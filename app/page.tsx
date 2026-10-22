@@ -7,6 +7,7 @@ export default async function Home() {
   let member;
   try { member = await currentMember(); } catch { redirect("/login?error=ServiceUnavailable"); }
   if (!member) redirect("/login");
+  if (member.reviewDemo) return <Terminal preview member={member} />;
   if (member.role !== "admin" && (!member.emailVerifiedAt || !member.onboardedAt)) redirect("/complete-account");
   return <Terminal member={member} />;
 }

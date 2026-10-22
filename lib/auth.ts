@@ -5,6 +5,9 @@ import { db } from "./db";
 import { googleSignupDecision, normalizeEmail, owners } from "./access";
 import { verifyPassword } from "./passwords";
 import type { Member } from "./types";
+import { reviewerConfig, reviewerPasswordMatches, validReviewerSession } from "./reviewer-access";
+
+type ReviewIdentity = { reviewDemo?: boolean; reviewFingerprint?: string };
 
 export const configured = () => ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXTAUTH_URL", "MONGODB_URI", "ADMIN_EMAILS"].every(key => Boolean(process.env[key]));
 export async function memberFor(email: string): Promise<Member | null> {
@@ -24,6 +27,11 @@ export const authOptions: NextAuthOptions = {
       { _id: `email-password:${email}:${bucket}` }, { $inc: { count: 1 }, $setOnInsert: { expiresAt: new Date(Date.now() + 7200000) } }, { upsert: true, returnDocument: "after" }
     );
     if ((attempts?.count || 0) > 20) return null;
+    const review = reviewerConfig();
+    if (email === normalizeEmail(process.env.REVIEWER_LOGIN_EMAIL || "")) {
+      if (!review || !await reviewerPasswordMatches(password, review)) return null;
+      return { id: `review-demo:${email}`, email, name: "Reviewer demo", reviewDemo: true, reviewFingerprint: review.fingerprint };
+    }
     const member = await database.collection<Member>("members").findOne({ email, active: true });
     if (!member?.emailVerifiedAt || !member.onboardedAt) return null;
     const credential = await database.collection<{email:string;passwordHash:string}>("emailCredentials").findOne({ email });
@@ -38,11 +46,14 @@ export const authOptions: NextAuthOptions = {
       if (!configured() || !user.email) return false;
       try {
         if (account?.provider === "email-password") {
+          const identity = user as typeof user & ReviewIdentity;
+          if (identity.reviewDemo) return validReviewerSession(user.email, identity.reviewFingerprint);
           const member = await memberFor(user.email);
           return Boolean(member?.active && member.emailVerifiedAt && member.onboardedAt);
         }
         if (account?.provider !== "google" || (profile as { email_verified?: boolean })?.email_verified !== true) return false;
         const email = normalizeEmail(user.email);
+        if (email === normalizeEmail(process.env.REVIEWER_LOGIN_EMAIL || "") && !owners().includes(email)) return false;
         const owner = owners().includes(email);
         const database = await db();
         const members = database.collection<Member>("members");
@@ -64,13 +75,32 @@ export const authOptions: NextAuthOptions = {
         return true;
       } catch { return "/login?error=ServiceUnavailable"; }
     },
-    async session({ session }) { if (session.user?.email) session.user.email = normalizeEmail(session.user.email); return session; }
+    async jwt({ token, user }) {
+      if (user) {
+        const identity = user as typeof user & ReviewIdentity;
+        token.reviewDemo = identity.reviewDemo === true;
+        token.reviewFingerprint = identity.reviewDemo ? identity.reviewFingerprint : undefined;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user?.email) session.user.email = normalizeEmail(session.user.email);
+      const identity = session as typeof session & ReviewIdentity;
+      identity.reviewDemo = token.reviewDemo === true;
+      identity.reviewFingerprint = typeof token.reviewFingerprint === "string" ? token.reviewFingerprint : undefined;
+      return session;
+    }
   }
 };
 export async function currentMember() {
   if (!configured()) return null;
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
+  const identity = session as typeof session & ReviewIdentity;
+  if (identity.reviewDemo) {
+    if (!validReviewerSession(session.user.email, identity.reviewFingerprint)) return null;
+    return { email: session.user.email, name: "Reviewer demo", role: "standard", active: true, reviewDemo: true } satisfies Member;
+  }
   const member = await memberFor(session.user.email);
   return member ? { ...member, name: session.user.name || member.name || member.email.split("@")[0] } : null;
 }
