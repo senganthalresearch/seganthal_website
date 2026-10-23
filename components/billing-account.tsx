@@ -41,6 +41,7 @@ export function BillingAccount() {
       <div className="billing-overview"><div><span className="public-eyebrow">{data.admin ? 'Administrator' : data.active ? 'Membership active' : 'Membership required'}</span>
         <h2>{data.admin ? 'Your administrator access is included.' : data.active ? 'Your research tools are ready.' : 'Unlock your research workspace.'}</h2>
         <p>{data.email}</p>{data.paidUntil > 0 && <p>Paid access until <strong>{date(data.paidUntil)}</strong></p>}
+        {data.complimentaryUntil > 0 && <p>Administrator-granted access until <strong>{date(data.complimentaryUntil)}</strong>. This grant does not charge you or cancel an existing subscription.</p>}
         {data.cancelRequested && <p>Renewal cancellation requested. Your paid access remains available until its expiry.</p>}
         {!data.admin && <p className="small muted">Subscription: {data.status}{data.subscriptionId ? ` · ${data.subscriptionId}` : ''}</p>}
       </div><div className="membership-price"><strong>₹599 <small>/ year</small></strong>{data.active && <a className="button primary" href="/workspace">Open workspace</a>}</div></div>

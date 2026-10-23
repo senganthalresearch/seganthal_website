@@ -67,6 +67,13 @@ test('checkout, replay, renewal, cancellation, refund and access checks',async()
     assert.equal(await billing.hasPaidAccess(member),false,'Full role must not bypass payment');
     assert.equal(await billing.hasPaidAccess({...member,role:'admin'}),true);
     assert.equal(await billing.hasPaidAccess({...member,role:'admin',active:false}),false);
+    const invited={...member,complimentaryAccessUntil:now+86400};
+    assert.equal(await billing.hasPaidAccess(invited),true,'An explicit admin grant unlocks a verified member');
+    assert.equal((await billing.billingSummary(invited)).complimentaryUntil,invited.complimentaryAccessUntil);
+    await assert.rejects(billing.createCheckout(invited),/already included/);
+    assert.equal(await billing.hasPaidAccess({...invited,complimentaryAccessUntil:now-1}),false);
+    assert.equal(await billing.hasPaidAccess({...invited,active:false}),false);
+    assert.equal(await billing.hasPaidAccess({...invited,onboardedAt:undefined}),false);
     price=60000;await assert.rejects(billing.createCheckout(member),/not configured correctly/);assert.equal(creates,0);price=59900;
     await billing.createCheckout(member);await billing.createCheckout(member);assert.equal(creates,1,'Repeated checkout reuses the existing subscription');
     providerStatus='authenticated';await billing.refreshBilling(member.email);assert.equal(await billing.hasPaidAccess(member),false,'Mandate authentication is not payment');

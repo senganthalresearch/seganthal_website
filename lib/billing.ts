@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { db } from './db';
 import { accessUntil, paidPeriod, paymentMode, YEARLY_PRICE, type BillingMode, type Invoice, type Payment, type PaidPeriod } from './billing-rules';
+import { hasComplimentaryAccess } from './member-access';
 import type { Member } from './types';
 
 export class BillingError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -37,7 +38,7 @@ export async function billingRecord(email: string) {
 }
 export async function hasPaidAccess(member: Member) {
   if (!member.active || member.reviewDemo) return false;
-  if (member.role === 'admin') return true;
+  if (member.role === 'admin' || hasComplimentaryAccess(member)) return true;
   const record = await billingRecord(member.email);
   return Boolean(record && accessUntil(record.periods) > 0);
 }
@@ -101,7 +102,7 @@ export async function refreshBilling(email: string) {
 
 export async function createCheckout(member: Member) {
   const c = config();
-  if (member.role === 'admin') throw new BillingError(400, 'Administrators already have access.');
+  if (member.role === 'admin' || hasComplimentaryAccess(member)) throw new BillingError(400, 'Your access is already included. Open your workspace.');
   const plan = await razorpay<{ id: string; period: string; interval: number; item: { amount: number; currency: string } }>(`plans/${c.planId}`);
   if (plan.id !== c.planId || plan.period !== 'yearly' || plan.interval !== 1 || plan.item.amount !== YEARLY_PRICE || plan.item.currency !== 'INR')
     throw new BillingError(503, 'The annual payment plan is not configured correctly. Contact support.');
@@ -152,7 +153,8 @@ export async function cancelRenewal(email: string) {
 export async function billingSummary(member: Member) {
   const record = await billingRecord(member.email);
   return { mode: paymentMode(), checkoutReady: Boolean(billingConfig()), admin: member.role === 'admin', email: member.email,
-    active: member.role === 'admin' || Boolean(record && accessUntil(record.periods)), paidUntil: record ? accessUntil(record.periods) : 0,
+    complimentaryUntil: hasComplimentaryAccess(member) ? member.complimentaryAccessUntil! : 0,
+    active: member.active && (member.role === 'admin' || hasComplimentaryAccess(member) || Boolean(record && accessUntil(record.periods))), paidUntil: record ? accessUntil(record.periods) : 0,
     status: record?.status || 'unpaid', cancelRequested: record?.cancelRequested || false,
     subscriptionId: record?.subscriptionId || null, payments: record?.periods || [] };
 }
