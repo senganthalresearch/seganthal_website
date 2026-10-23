@@ -7,7 +7,7 @@
 - Checkout signatures, signed raw-body webhooks, event deduplication, payment ownership, cancellation and refund reconciliation are implemented. Checkout fails closed when provider configuration is incomplete.
 - Searchable, paginated admin user directory and expiring, administrator-controlled reviewer access for an existing verified website account. Its original password remains valid. Reviewer sessions open labelled sample data and cannot call private member/admin APIs. They are not real checkout tests.
 - Consistent locally served Roboto for English with Noto Sans Tamil fallback; active styles use supplied font weights.
-- Individual operator: Jayamohan Sundararaj. Contact: 118/7 Ganesh Nagar, Venkatachalapuram, Theni, Tamil Nadu 625534. Support Monday–Sunday, 6 PM–10 PM IST. Grievance contact Surya. The owner must ensure these details match merchant KYC.
+- Business identity updated from the owner-supplied Udyam certificate: SENGANTHAL INVESTMENT GROUP, a Micro services proprietorship; proprietor recorded as JAYAMOHAN. Registered enterprise address: No. 3/3A, Mela Street, Thombakkulam, Keelarajakularaman, Virudhunagar, Tamil Nadu 626136. The previously supplied Theni address is labelled separately as support correspondence. Website administrator profile remains as supplied by the owner and does not assert a different legal proprietor. The certificate has not been independently validated against the government record; owner/PAN/bank identity and current addresses must be confirmed for merchant KYC.
 - Refund requests within seven calendar days of first purchase; duplicate/incorrect charges reviewed for refunds. Approved refunds initiated within seven working days, plus bank processing. Cancellation stops future renewal while retaining the paid period.
 
 ## Checks
@@ -19,7 +19,7 @@
 
 ## Remaining external or operational checks
 
-1. Razorpay decides website, business and subscription approval. Approval has not been independently confirmed.
+1. Razorpay rejected the website for its stock-related financial-services category, according to the owner-supplied rejection notice. Updated Udyam business details do not reverse that decision. Obtain written category acceptance before enabling payments.
 2. A real Razorpay test subscription checkout, provider webhook delivery and full failure/refund/renewal scenarios must pass before accepting real payments. This release does not claim those tests happened. Local payment configuration is incomplete; production configuration needs verification.
 3. Confirm merchant/KYC identity, market-data commercial permissions and tax obligations. No SEBI registration or investment-advice approval is claimed.
 4. Confirm rotation of secrets previously shared in chat, hosting/database backup retention, restore drill and uptime/error alerts. No backup recovery or load certification has been performed.

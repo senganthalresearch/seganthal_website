@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DraftNotice, PublicPage } from "@/components/public-page";
 import { reviewPages, type ReviewPageKey } from "@/lib/review-pages";
-import { publicContact } from "@/lib/public-content";
+import { publicBusiness, publicContact } from "@/lib/public-content";
 import { defaultSettings } from "@/lib/site-settings";
 import { MembershipOffer } from './membership-offer';
 import { billingConfig } from '@/lib/billing';
@@ -12,7 +12,7 @@ export function ReviewPage({ page }: { page: ReviewPageKey }) {
     {page === 'pricing' && <><div className="notice">{billingConfig()?.mode === 'live' ? 'Checkout is available after account setup.' : billingConfig()?.mode === 'test' ? 'Test environment: no real payments. Test memberships do not unlock the live site.' : 'Checkout is not open yet. No payment can be taken on this site until it is enabled.'}</div><MembershipOffer/></>}
     {page === "about" && <div className="public-admin-profile">
       <img src={defaultSettings.about.photo} alt="Jayamohan Sundararaj, website administrator" width={72} height={72}/>
-      <div><span className="public-eyebrow">Website administrator</span><h2>{defaultSettings.about.founderName}</h2><p>Individual operator of Senganthal · Theni, Tamil Nadu</p></div>
+      <div><span className="public-eyebrow">Website administrator</span><h2>{defaultSettings.about.founderName}</h2><p>Website administration · {publicBusiness.name}</p></div>
     </div>}
     {content.sections.map(([heading, body])=><section key={heading}><h2>{heading}</h2><p>{body}</p></section>)}
     {"pending" in content && content.pending && <DraftNotice/>}

@@ -7,7 +7,7 @@ import { ResearchIcon, ResearchIllustration, PatternDrawing } from "./research-a
 import { HomeAnnouncement } from "./home-announcement";
 import { EmailAccess } from "./email-access";
 import type { AnnouncementContent } from "@/lib/site-settings";
-import { publicLinks } from "@/lib/public-content";
+import { publicBusiness, publicLinks } from "@/lib/public-content";
 import { MembershipOffer } from './membership-offer';
 const whatsapp="https://wa.me/919025839615?text=Hello%2C%20I%20would%20like%20details%20about%20the%20Senganthal%20fundamental%20analysis%20classes.";
 export default function Login({configured,error,emailAvailable,previewAvailable,announcement}:{configured:boolean;error?:string;emailAvailable:boolean;previewAvailable:boolean;announcement:AnnouncementContent}) {
@@ -113,6 +113,6 @@ export default function Login({configured,error,emailAvailable,previewAvailable,
               <span>Verified Google registration · protected email sign-in</span>
             </div>
           </section>
- </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a><nav className="welcome-legal-links" aria-label="Website information">{publicLinks.map(link=><a href={link.href} key={link.href}>{link.label}</a>)}</nav></footer>
+ </div></section><footer className="welcome-footer"><a className="welcome-brand" href="/"><img src="/senganthal-logo-transparent.png" alt=""/><span>SENGANTHAL<small>Research & Community</small></span></a><p>{publicBusiness.name}<br/>{publicBusiness.description}<br/>Educational research · Verify figures with original filings.</p><a href="tel:+919025839615"><Phone size={15}/> Contact us</a><a href={whatsapp} target="_blank" rel="noreferrer"><MessageCircle size={15}/> WhatsApp</a><nav className="welcome-legal-links" aria-label="Website information">{publicLinks.map(link=><a href={link.href} key={link.href}>{link.label}</a>)}</nav></footer>
  </main>;
 }

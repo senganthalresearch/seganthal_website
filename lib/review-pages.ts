@@ -1,3 +1,5 @@
+import { publicBusiness } from "./public-content";
+
 export const reviewPages = {
   about: {
     title: "Research with a clearer view",
@@ -6,7 +8,7 @@ export const reviewPages = {
       ["What the workspace provides", "Company financial information, historical market data, interactive price charts, financial ratios, screening tools, news and personal watchlists. Members can record their own observations and portfolio transactions."],
       ["How to use it", "Figures can be delayed, incomplete or revised by their sources. Check exchange announcements and original company filings before relying on a figure. Screening results and scores are research aids, not instructions to trade."],
       ["What this website does not provide", "The current software does not execute trades, hold customer funds, manage investment portfolios or guarantee returns. Watchlists and portfolio records are entered by members themselves. Classes and community activities are separate from the analytics software."],
-      ["Who operates Senganthal", "Jayamohan Sundararaj operates the website as an individual from Theni, Tamil Nadu. Senganthal is the website name, not a registered company. See Contact for the operating address, support hours and grievance contact."]
+      ["Who operates Senganthal", `Senganthal is operated under ${publicBusiness.name}, an ${publicBusiness.description}. The proprietor is recorded as ${publicBusiness.proprietor} on the Udyam certificate. The enterprise is classified as Micro, with Services as its major activity. See Contact for the registered enterprise address and separate support correspondence address.`]
     ]
   },
   contact: {
@@ -14,7 +16,9 @@ export const reviewPages = {
     intro: "Questions about account access, data, classes or a future subscription? Contact the Senganthal team directly.",
     sections: [
       ["Customer support", "Email senganthalreserch@gmail.com or call +91 90258 39615. Include the email linked to your account and a short description. Never send your password, email code or full card details."],
-      ["Operator and operating address", "Operated by Jayamohan Sundararaj as an individual under the Senganthal name. Address: 118/7, Ganesh Nagar, Venkatachalapuram, Theni, Tamil Nadu – 625534, India. This is not a registered company."],
+      ["Business identity", `${publicBusiness.name} · ${publicBusiness.description}. Proprietor recorded on the Udyam certificate: ${publicBusiness.proprietor}. Senganthal is the website brand; the enterprise is a proprietorship, not a private limited company.`],
+      ["Registered enterprise address", publicBusiness.registeredAddress],
+      ["Support correspondence address", publicBusiness.supportAddress],
       ["Support availability", "Monday–Sunday, 6 PM–10 PM IST. You may email outside these hours; requests will be handled during support hours."],
       ["Grievance contact", "Surya · senganthalreserch@gmail.com · +91 90258 39615. Include your account email and a description of the concern."]
     ]
@@ -38,7 +42,7 @@ export const reviewPages = {
       ["Cookies and providers", "Session cookies keep users signed in. Google provides initial account verification; Resend sends account email codes. Render hosts the application and MongoDB stores account and workspace data. Market data and news come from external sources whose availability can change."],
       ["Payments", "When checkout is enabled, Razorpay processes payments. We store subscription and payment references, payment status, billing periods and renewal consent to manage access and support. Card details are handled by Razorpay and are not stored by this website."],
       ["Retention and requests", "Account records and saved research have no automatic expiry and are retained until manually removed by the operator. Deletion requests are handled by support; records needed for legal obligations or dispute resolution may be retained. Database backups follow the hosting provider's retention settings and may retain copies after deletion from the active database. To request access, correction, deletion or account closure, email senganthalreserch@gmail.com. Account ownership may need to be verified before action."],
-      ["Operator and changes", "Jayamohan Sundararaj is responsible for operating the website. Use the contact and grievance pages for privacy concerns. Material changes to the data collected or its use will be described on this page before those features launch."]
+      ["Operator and changes", `${publicBusiness.name}, a sole proprietorship with proprietor ${publicBusiness.proprietor}, operates this website. Use the contact and grievance pages for privacy concerns. Material changes to the data collected or its use will be described on this page before those features launch.`]
     ]
   },
   "terms-and-conditions": {
@@ -49,7 +53,7 @@ export const reviewPages = {
       ["Accounts and permitted use", "Users must provide accurate registration information, keep their site password confidential and use only accounts they are authorised to access. Automated scraping, bypassing access controls, abusive posts and redistribution of data without relevant rights are not permitted. Access may be restricted for misuse."],
       ["Eligibility", "You must have the legal capacity to enter a subscription agreement and be authorised to use the payment method before purchasing access. Do not submit personal information or payments on another person's behalf without their permission."],
       ["Investment decisions", "The software does not execute transactions or hold customer assets. Scores, filters and charts are analytical aids, not a promise of returns or a substitute for independent professional advice. Users remain responsible for their decisions."],
-      ["Operator and support", "The service is operated by Jayamohan Sundararaj as an individual from 118/7, Ganesh Nagar, Venkatachalapuram, Theni, Tamil Nadu – 625534, India. Account and service concerns can be sent to senganthalreserch@gmail.com. Unresolved concerns may be escalated to Surya using the grievance page; statutory consumer rights are unaffected."],
+      ["Operator and support", `The service is operated under ${publicBusiness.name}, an ${publicBusiness.description}, with proprietor ${publicBusiness.proprietor}. Registered enterprise address: ${publicBusiness.registeredAddress}. The separate support correspondence address is listed on Contact. Account and service concerns can be sent to senganthalreserch@gmail.com. Unresolved concerns may be escalated to Surya using the grievance page; statutory consumer rights are unaffected.`],
       ["Subscriptions", "Annual access is ₹599 and will renew yearly only with your authorisation. Cancellation stops the next renewal while preserving access until the paid year ends. A full refund may be requested within 7 days of the first purchase; duplicate and incorrect charges are also eligible for review. Read the pricing, refund and cancellation pages before purchase."]
     ], pending: true
   },
@@ -85,7 +89,7 @@ export const reviewPages = {
     intro: "Tell us when something about your account, data or service is not working as expected.",
     sections: [
       ["How to raise a concern", "Email senganthalreserch@gmail.com with the account email, the issue and the outcome you request. You may also call +91 90258 39615. Do not send passwords, one-time codes or full card details."],
-      ["Grievance contact", "Surya, on behalf of individual operator Jayamohan Sundararaj. Address: 118/7, Ganesh Nagar, Venkatachalapuram, Theni, Tamil Nadu – 625534, India. Contact senganthalreserch@gmail.com or +91 90258 39615."],
+      ["Grievance contact", `Surya, on behalf of ${publicBusiness.name}. Support correspondence address: ${publicBusiness.supportAddress}. The registered enterprise address is listed on Contact. Contact senganthalreserch@gmail.com or +91 90258 39615.`],
       ["Response timeline", "We aim to acknowledge complaints within 48 hours and resolve them within 30 days of receipt. If investigation requires more time, we will explain the reason and provide an update. Follow up on the same email thread so the history of your concern is available. Support hours are Monday–Sunday, 6 PM–10 PM IST."]
     ]
   },
