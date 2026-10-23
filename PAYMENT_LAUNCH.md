@@ -27,7 +27,9 @@ Open the existing web service → **Environment → Edit**, and add/update:
 
 Never use `NEXT_PUBLIC_` for secrets. Save and deploy the environment change. Saving keys while mode is disabled does not enable checkout.
 
-Read-only configuration check in Render Shell: `node scripts/check-billing.mjs`. Locally use `node --env-file=.env.local scripts/check-billing.mjs`.
+**Render Free:** sign in as an administrator → My Space → Admin → System health and logs → **Check payment setup**. It reads the configured plan without revealing credentials or creating payments. Shell access is not required.
+
+Optional read-only configuration check on plans with Render Shell: `node scripts/check-billing.mjs`. Locally use `node --env-file=.env.local scripts/check-billing.mjs`.
 
 ## 3. Verify before enabling customer payments
 

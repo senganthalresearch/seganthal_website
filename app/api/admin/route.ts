@@ -6,6 +6,7 @@ import {nseQuote,nseSearch} from '@/lib/nse-market';
 import {flows} from '@/lib/dashboard-data';
 import {z} from 'zod';
 import {serviceFailure,fetchUpstream,UpstreamError} from '@/lib/upstream';
+import {checkBillingSetup} from '@/lib/billing-diagnostics';
 export const maxDuration=60;
 async function check(name:string,fn:()=>Promise<unknown>){const start=Date.now();try{await fn();return {name,status:'ok',detail:'Reachable',duration:Date.now()-start}}catch(error){return {name,status:'error',detail:serviceFailure(error).message,duration:Date.now()-start}}}
 async function bseQuoteCheck(){
@@ -17,7 +18,8 @@ async function bseQuoteCheck(){
 export const GET=api(async()=>{await requireMember(true);return {errors:await(await db()).collection('errors').find({},{projection:{_id:0}}).sort({createdAt:-1}).limit(50).toArray()}});
 export const POST=api(async request=>{
  checkOrigin(request);const member=await requireMember(true);await limited(member,'admin-tools',8);
- const {action}=z.object({action:z.enum(['health','smoke','emailTest','cleanup','clearErrors'])}).parse(await request.json());
+ const {action}=z.object({action:z.enum(['health','smoke','emailTest','billingCheck','cleanup','clearErrors'])}).parse(await request.json());
+ if(action==='billingCheck')return checkBillingSetup();
  const database=await db();
  if(action==='emailTest'){
   await limited(member,'email-delivery-test',1);
