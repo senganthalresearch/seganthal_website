@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
+import { reviewPages } from "@/lib/review-pages";
 import { ReviewPage } from "@/components/review-page";
-export const metadata: Metadata = { title: "Grievance | Senganthal", robots: { index: true, follow: true } };
+export const metadata = publicMetadata("/grievance", reviewPages["grievance"].title + " | Senganthal", reviewPages["grievance"].intro);
 export default function Page() { return <ReviewPage page="grievance"/>; }

@@ -35,6 +35,9 @@ async function ensureIndexes(database: Db) {
     database.collection("watchlist").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("portfolio").createIndex({ owner: 1, symbol: 1 }, { unique: true }),
     database.collection("members").createIndex({ email: 1 }, { unique: true }),
+    database.collection('billingAccounts').createIndex({ mode: 1, subscriptionId: 1 }),
+    database.collection('members').createIndex({ billing_live_until: 1, email: 1 }),
+    database.collection('members').createIndex({ billing_test_until: 1, email: 1 }),
     database.collection("emailCredentials").createIndex({ email: 1 }, { unique: true }),
     database.collection("emailOtpChallenges").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     database.collection("messages").createIndex({ createdAt: -1 }),
@@ -50,12 +53,17 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-function matches<T extends StoredDocument>(doc: T, query: Query<T>) {
+function matches<T extends StoredDocument>(doc: T, query: Query<T>): boolean {
   return Object.entries(query).every(([key, value]) => {
+    if (key === '$or') return (value as Query<T>[]).some(part => matches(doc, part));
+    if (key === '$and') return (value as Query<T>[]).every(part => matches(doc, part));
     const current = doc[key];
     const currentValue = comparable(current);
     if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)) {
       const operators = value as Record<string, unknown>;
+      if ('$in' in operators && !(operators.$in as unknown[]).includes(current)) return false;
+      if ('$nin' in operators && (operators.$nin as unknown[]).includes(current)) return false;
+      if ('$regex' in operators && !new RegExp(String(operators.$regex), String(operators.$options || '')).test(String(current || ''))) return false;
       if ("$exists" in operators && (current !== undefined) !== operators.$exists) return false;
       if ("$ne" in operators && current === operators.$ne) return false;
       if ("$lt" in operators && !(currentValue < comparable(operators.$lt))) return false;
@@ -130,6 +138,7 @@ class LocalCursor<T extends StoredDocument> {
     this.rows = this.rows.slice(0, count);
     return this;
   }
+  skip(count: number) { this.rows = this.rows.slice(count); return this; }
 
   async toArray() {
     return this.rows.map(row => projected(row, this.projection)) as T[];

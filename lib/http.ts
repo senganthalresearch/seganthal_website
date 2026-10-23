@@ -5,13 +5,19 @@ import type { Member } from "./types";
 import { ZodError } from "zod";
 import { serviceFailure } from "./upstream";
 import { can, type Permission } from './permissions';
+import { BillingError, hasPaidAccess } from './billing';
 export class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
-export async function requireMember(admin = false) {
+export async function requireAccount() {
   const member = await currentMember();
   if (!member) throw new HttpError(401, "Sign in to your account to continue.");
   if (member.reviewDemo) throw new HttpError(403, "The reviewer demo uses sample data only. Member APIs are unavailable.");
   if (member.role !== "admin" && (!member.emailVerifiedAt || !member.onboardedAt)) throw new HttpError(403, "Complete email verification to use the workspace.");
-  if (admin && member.role !== "admin") throw new HttpError(403, "Administrator access required.");
+  return member;
+}
+export async function requireMember(admin = false) {
+  const member = await requireAccount();
+  if (admin && member.role !== 'admin') throw new HttpError(403, 'Administrator access required.');
+  if (!await hasPaidAccess(member)) throw new HttpError(402, 'An active subscription is required. Open Account & billing to continue.');
   return member;
 }
 export async function requirePermission(permission: Permission) {
@@ -36,9 +42,9 @@ export function api(handler: (request: Request) => Promise<unknown>) {
   return async (request: Request) => {
     try { const data = await handler(request); return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store" } }); }
     catch (error) {
-      const status = error instanceof HttpError ? error.status : error instanceof ZodError ? 400 : 503;
+      const status = error instanceof HttpError || error instanceof BillingError ? error.status : error instanceof ZodError ? 400 : 503;
       const failure = serviceFailure(error);
-      const message = error instanceof HttpError ? error.message : error instanceof ZodError ? "Please check the supplied fields." : failure.message;
+      const message = error instanceof HttpError || error instanceof BillingError ? error.message : error instanceof ZodError ? "Please check the supplied fields." : failure.message;
       if (status >= 500) {
         console.error("ServiceError", { page: new URL(request.url).pathname, method: request.method, status, ...failure });
         // If MongoDB itself failed, logging there would repeat the same timeout.

@@ -25,7 +25,7 @@ export function CompleteAccount({ email, initiallyVerified, emailAvailable }: { 
       await post({ action, code, phone, password });
       if (action === "send") { setSent(true); setMessage(`A code was sent to ${email}.`); }
       if (action === "verify") { setVerified(true); setMessage("Email verified. Finish setting up your account."); }
-      if (action === "complete") window.location.assign("/");
+      if (action === "complete") window.location.assign("/workspace");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not complete account setup."); }
     finally { setBusy(false); }
   }

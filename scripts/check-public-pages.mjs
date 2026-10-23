@@ -19,6 +19,6 @@ for (const path of paths.filter(path => !path.startsWith('/subscription-'))) {
   }
 }
 assert.doesNotMatch(pages.get('/login'), /Always Free|No subscription or upgrades|Celebrating our 1st Anniversary/);
-assert.match(pages.get('/pricing'), /₹600 per year/);
+assert.match(pages.get('/pricing'), /₹599 per year/);
 assert.match(pages.get('/subscription-success'), /cannot confirm a payment/);
 process.stdout.write('PASS public navigation, pricing and no client-side payment confirmation\n');

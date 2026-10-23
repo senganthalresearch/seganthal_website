@@ -1,7 +1,7 @@
 import { z } from 'zod';
 export const roleSchema = z.enum(['admin', 'full', 'standard', 'viewer', 'member']);
 export const permissionsSchema = z.object({ analyze:z.boolean().optional(),watchlist:z.boolean().optional(),chat:z.boolean().optional(),reports:z.boolean().optional(),swing:z.boolean().optional(),export:z.boolean().optional(),aboutEdit:z.boolean().optional() });
-export const memberSchema = z.object({email:z.string().trim().toLowerCase().pipe(z.email()),name:z.string().trim().max(100).default(''),role:roleSchema,active:z.boolean(),permissions:permissionsSchema.default({})});
+export const memberSchema = z.object({email:z.string().trim().toLowerCase().pipe(z.email()),name:z.string().trim().max(100).default(''),role:roleSchema,active:z.boolean(),permissions:permissionsSchema.default({}),reviewerAccessUntil:z.number().int().nonnegative().optional()});
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 const image = z.string().max(750000).refine(v=>v==='' || v==='/founder-reference.jpg' || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v),'Choose a PNG, JPEG or WebP image under 500 KB.');
 export const aboutSchema = z.object({founderName:z.string().trim().min(1).max(120),founderTitle:z.string().max(120),photo:image,tagline:z.string().max(250),story:z.string().max(6000),journey:z.string().max(3000),members:z.string().max(30),founded:z.string().max(20),programs:z.string().max(30),offers:z.string().max(3000),quotes:z.string().max(6000),closing:z.string().max(300)});

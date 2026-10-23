@@ -15,9 +15,9 @@ html[data-theme="dark"] {
   --gain-soft: #21382e; --loss-soft: #402a30; --shadow: 0 4px 16px #00000012;
 }
 html { scroll-behavior: smooth; }
-body { background: var(--bg); color: var(--ink); font-family: Inter, "Segoe UI", Arial, sans-serif; font-size: 14px; line-height: 1.6; }
+body { background: var(--bg); color: var(--ink); font-family: ResearchRoboto, "Noto Sans Tamil", Arial, sans-serif; font-size: 14px; line-height: 1.6; }
 *, *::before, *::after { letter-spacing: 0; }
-h1,h2,h3,h4 { color: var(--ink); letter-spacing: 0; font-weight: 650; }
+h1,h2,h3,h4 { color: var(--ink); letter-spacing: 0; font-weight:600; }
 h1 { font-size: 30px; line-height: 1.25; } h2 { font-size: 20px; } h3 { font-size: 16px; }
 p, label, span, strong { overflow-wrap: anywhere; }
 button,a,input,select,textarea { transition: background-color .16s, border-color .16s, color .16s; }
@@ -45,7 +45,7 @@ html[data-theme="dark"] .primary { color: #141821; }
 .pill,.count-badge { background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
 .panel { background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 24px 0; margin-bottom: 16px; }
 .panel-heading,.section-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding: 0; border-radius: 0; background: transparent; color: var(--ink); }
-.section-title h2 { font-size: 18px; font-weight: 650; }
+.section-title h2 { font-size: 18px; font-weight:600; }
 .section-title span,.section-meta { color: var(--muted); font-size: 11px; }
 .section-title>div>span { display: block; margin-top: 4px; }
 .theme-control { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); flex-shrink: 0; }
@@ -56,7 +56,7 @@ html[data-theme="dark"] .primary { color: #141821; }
 .brand-actions { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 32px; }
 .brand-card { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-logo { background: transparent; width: 42px; height: 44px; object-fit: contain; border-radius: 4px; }
-.brand-title-wrap strong { display: block; font-size: 16px; font-weight: 650; }
+.brand-title-wrap strong { display: block; font-size: 16px; font-weight:600; }
 .brand-sub-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
 .brand-sub-row small,.brand-clock { font-size: 10px; font-style: normal; }
 .brand-card { flex-wrap: wrap; }
@@ -117,7 +117,7 @@ html[data-theme="dark"] .primary { color: #141821; }
 .flow-compact span { font-size: 13px; }.flow-compact strong { font-size: 22px; }.flow-compact small { color: var(--muted); font-size: 11px; }
 .table-wrap,.scorecard-table-wrap { max-width: 100%; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
 table { color: var(--ink); width: 100%; border-collapse: collapse; }
-th { background: var(--surface-raised); color: var(--muted); padding: 12px 14px; font-size: 10px; font-weight: 650; letter-spacing: 0; border-bottom: 1px solid var(--line); }
+th { background: var(--surface-raised); color: var(--muted); padding: 12px 14px; font-size: 10px; font-weight:600; letter-spacing: 0; border-bottom: 1px solid var(--line); }
 td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 td strong { font-size: 13px; color: inherit; } td small { color: var(--muted); font-size: 11px; }
 tbody tr:hover { background: var(--surface-raised); }
@@ -125,8 +125,8 @@ tbody tr:hover { background: var(--surface-raised); }
 .scroll-table thead { position: sticky; top: 0; z-index: 1; }
 .sector-rotation-table table { min-width: 720px; }.sector-rotation-table td,.sector-rotation-table th { padding: 8px; font-size: 11px; }
 .heat-rect { display: inline-block; text-align: center; min-width: 54px; padding: 6px 4px; border-radius: 3px; background: var(--surface-raised); color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.heat-rect.gain,.heat-rect.strong-gain { background: var(--gain-soft); color: var(--green); }.heat-rect.strong-gain { font-weight: 750; }
-.heat-rect.loss,.heat-rect.strong-loss { background: var(--loss-soft); color: var(--loss); }.heat-rect.strong-loss { font-weight: 750; }
+.heat-rect.gain,.heat-rect.strong-gain { background: var(--gain-soft); color: var(--green); }.heat-rect.strong-gain { font-weight:700; }
+.heat-rect.loss,.heat-rect.strong-loss { background: var(--loss-soft); color: var(--loss); }.heat-rect.strong-loss { font-weight:700; }
 .heatmap-legend span { display: inline-flex; align-items: center; gap: 6px; }.heatmap-legend i { min-width: 20px; width: 20px; height: 16px; }
 .deal-report-block { margin-bottom: 24px; }.deal-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }.deal-report-heading h3 { margin: 0; }.deal-report-heading>span { font-size: 11px; color: var(--muted); }
 .deal-side.buy { color: var(--green); font-weight: 700; }.deal-side.sell { color: var(--loss); font-weight: 700; }
@@ -175,7 +175,7 @@ tbody tr:hover { background: var(--surface-raised); }
 .anniversary-login { background: var(--bg); color: var(--ink); padding: 0 40px; overflow: visible; }
 .anniversary-header { position: sticky; top: 0; z-index: 40; background: var(--bg); max-width: 1400px; margin: auto; padding: 20px 0; border-color: var(--line); }
 .anniversary-brand-img { width: 42px !important; height: 44px !important; background: transparent !important; border-radius: 4px !important; }
-.anniversary-brand-title { display: block; font-size: 16px; font-weight: 650; }.anniversary-brand-sub { display: block; font-size: 9px; color: var(--muted); margin-top: 4px; }
+.anniversary-brand-title { display: block; font-size: 16px; font-weight:600; }.anniversary-brand-sub { display: block; font-size: 9px; color: var(--muted); margin-top: 4px; }
 .anniversary-header-meta,.anniversary-header-actions { display: flex; align-items: center; gap: 20px; }.anniversary-header-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }.anniversary-anniv-tag { display: flex; gap: 6px; font-size: 11px; color: var(--muted); }
 .anniversary-content-grid { max-width: 1400px; margin: auto; display: flex; flex-direction: column; padding: 48px 0; gap: 40px; }
 .anniversary-celebration-hero { position: relative; min-height: 340px; display: flex; align-items: center; padding: 40px; background: #20242b url('/terminal-preview.png') center / cover; color: #fff; isolation: isolate; }

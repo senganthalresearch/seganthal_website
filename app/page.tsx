@@ -1,14 +1,7 @@
-import { redirect } from "next/navigation";
-import { currentMember } from "@/lib/auth";
-import Terminal from "@/components/terminal";
-export const dynamic = "force-dynamic";
-export default async function Home() {
-  if (process.env.SHARE_DEMO === "true") redirect("/preview");
-  let member;
-  try { member = await currentMember(); } catch { redirect("/login?error=ServiceUnavailable"); }
-  if (!member) redirect("/login");
-  if (member.reviewDemo) return <Terminal preview member={member} />;
-  if (member.role !== "admin" && (!member.emailVerifiedAt || !member.onboardedAt)) redirect("/complete-account");
-  return <Terminal member={member} />;
-}
+import { LandingPage } from '@/components/landing-page';
+import { publicMetadata } from '@/lib/seo';
+export const dynamic = 'force-dynamic';
+export const metadata = publicMetadata('/', 'Senganthal | Stock Research & Financial Data',
+  'Explore Indian company financials, historical charts, screening tools and watchlists with Senganthal, a workspace for independent stock research.');
+export default function Home() { return <LandingPage/>; }
 

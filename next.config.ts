@@ -20,7 +20,9 @@ const config: NextConfig = {
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" }
-    ] }];
+    ] }, ...['/login/:path*', '/signup/:path*', '/signin/:path*', '/complete-account/:path*', '/workspace/:path*', '/dashboard/:path*', '/admin/:path*', '/account/:path*', '/preview/:path*', '/subscription-success', '/subscription-failed', '/api/:path*'].map(source => ({
+      source, headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }]
+    }))];
   }
 };
 export default config;

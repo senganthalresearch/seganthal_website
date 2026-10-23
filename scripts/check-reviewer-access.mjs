@@ -40,7 +40,7 @@ try {
   const anonymous = await request('/api/me');
   assert.equal(anonymous.status, 401);
   const token = await encode({ secret, token: { email, name: 'Review fixture', reviewDemo: true, reviewFingerprint: fingerprint, role: 'admin' }, maxAge: 300 });
-  const home = await request('/', token);
+  const home = await request('/workspace', token);
   assert.equal(home.status, 200);
   assert.match(await home.text(), /DEMO WORKSPACE/);
   for (const path of ['/api/me','/api/members','/api/admin','/api/chat','/api/chat/image','/api/portfolio','/api/ledger','/api/watchlist','/api/settings','/api/reports','/api/stocks','/api/market','/api/news','/api/dashboard','/api/swing','/api/analytics','/api/preferences','/api/visits']) {
@@ -52,7 +52,7 @@ try {
   assert.equal((await request('/api/email-auth', token, 'POST', { action: 'send' })).status, 401, 'Reviewer cannot start member onboarding');
   const forged = await encode({ secret, token: { email, reviewDemo: true, reviewFingerprint: 'wrong' }, maxAge: 300 });
   assert.equal((await request('/api/me', forged)).status, 401);
-  const invalid = await request('/', forged);
+  const invalid = await request('/workspace', forged);
   assert.equal(invalid.status, 307);
   assert.match(invalid.headers.get('location'), /\/login/);
   process.stdout.write('PASS sample dashboard, anonymous denial, 18 API read denials, 4 write denials and invalid reviewer-session rejection\n');

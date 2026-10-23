@@ -35,3 +35,11 @@ Privately copy the four `REVIEWER_*` environment values from that file into Rend
 Provide only the SITE username/password through Razorpay's official verification form. Never provide an administrator account, Google password, OTP, API key or password hash. Explain that it is an isolated sample-data demo and has no live checkout. Disable it after review, redeploy and delete the private local credentials file when no longer needed.
 
 The Razorpay website form should use `https://www.senganthal.co.in/` and answer **Yes** when asked whether users must log in. Confirm that the site's payment, pricing, refund and cancellation terms accurately describe the eventual paid product before enabling live charges. Payment integration is a separate release; this authentication change does not activate subscriptions.
+
+## Reviewer access for an existing submitted login
+
+If a reviewer already has a normal verified website account, use Admin → User management → View / edit → Temporary Razorpay reviewer access → Grant / extend 14 days → Save member. Do not change the password or configure the same email as REVIEWER_LOGIN_EMAIL. The existing credential remains in emailCredentials; the server derives sample-only review access from the member's reviewerAccessUntil on every request.
+
+Only administrators can grant or remove this access. New grants must expire within 30 days and require a completed non-admin account. The directory shows Reviewer demo · no payment and the expiry, with a reviewer filter. Review access does not create a payment or subscription, and production member/admin APIs remain blocked. Expiry or removal immediately restores normal membership rules. Account suspension still blocks login. The demonstration is labelled and is not a real checkout test.
+
+After saving, verify the submitted website credentials in a private browser window, confirm the DEMO WORKSPACE label, and confirm a separate ordinary unpaid member still reaches Account & billing. Remove review access when the review finishes.

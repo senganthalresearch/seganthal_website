@@ -7,6 +7,8 @@ import { verifyPassword } from "./passwords";
 import type { Member } from "./types";
 import { reviewerConfig, reviewerPasswordMatches, validReviewerSession } from "./reviewer-access";
 
+import { hasReviewerAccess } from "./reviewer-membership";
+
 type ReviewIdentity = { reviewDemo?: boolean; reviewFingerprint?: string };
 
 export const configured = () => ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXTAUTH_URL", "MONGODB_URI", "ADMIN_EMAILS"].every(key => Boolean(process.env[key]));
@@ -14,7 +16,7 @@ export async function memberFor(email: string): Promise<Member | null> {
   const normalized = normalizeEmail(email);
   if (owners().includes(normalized)) return { email: normalized, role: "admin", active: true };
   const member = await (await db()).collection<Member>("members").findOne({ email: normalized, active: true });
-  return member ? { email: member.email, name: member.name, username: member.username, contactPhone: member.contactPhone, authProvider: member.authProvider, emailVerifiedAt: member.emailVerifiedAt, onboardedAt: member.onboardedAt, role: member.role, active: member.active, permissions: member.permissions } : null;
+  return member ? { reviewerAccessUntil: member.reviewerAccessUntil, reviewDemo: hasReviewerAccess(member), email: member.email, name: member.name, username: member.username, contactPhone: member.contactPhone, authProvider: member.authProvider, emailVerifiedAt: member.emailVerifiedAt, onboardedAt: member.onboardedAt, role: member.role, active: member.active, permissions: member.permissions } : null;
 }
 export const authOptions: NextAuthOptions = {
   providers: [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID || "not-configured", clientSecret: process.env.GOOGLE_CLIENT_SECRET || "not-configured", authorization: { params: { scope: "openid email profile", prompt: "select_account" } } }), CredentialsProvider({ id: "email-password", name: "Email and password", credentials: { email: { label: "Email", type: "email" }, password: { label: "Password", type: "password" } }, async authorize(credentials) {

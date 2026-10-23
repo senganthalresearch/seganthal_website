@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
+import { reviewPages } from "@/lib/review-pages";
 import { ReviewPage } from "@/components/review-page";
-export const metadata: Metadata = { title: "Terms And Conditions | Senganthal", robots: { index: true, follow: true } };
+export const metadata = publicMetadata("/terms-and-conditions", reviewPages["terms-and-conditions"].title + " | Senganthal", reviewPages["terms-and-conditions"].intro);
 export default function Page() { return <ReviewPage page="terms-and-conditions"/>; }

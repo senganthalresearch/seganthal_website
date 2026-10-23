@@ -23,9 +23,9 @@ export function EmailAccess({ emailAvailable }: { emailAvailable: boolean }) {
     setBusy(true); setMessage("");
     try {
       if (mode === "reset") await post("reset");
-      const result = await signIn("email-password", { email, password, redirect: false, callbackUrl: "/" });
+      const result = await signIn("email-password", { email, password, redirect: false, callbackUrl: "/workspace" });
       if (!result?.ok || result.error) throw new Error("Email or password is incorrect. Use reset if you forgot your password.");
-      window.location.assign("/");
+      window.location.assign("/workspace");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to sign in."); }
     finally { setBusy(false); }
   }

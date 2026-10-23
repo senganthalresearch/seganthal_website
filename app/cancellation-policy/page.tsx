@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import { publicMetadata } from "@/lib/seo";
+import { reviewPages } from "@/lib/review-pages";
 import { ReviewPage } from "@/components/review-page";
-export const metadata: Metadata = { title: "Cancellation Policy | Senganthal", robots: { index: true, follow: true } };
+export const metadata = publicMetadata("/cancellation-policy", reviewPages["cancellation-policy"].title + " | Senganthal", reviewPages["cancellation-policy"].intro);
 export default function Page() { return <ReviewPage page="cancellation-policy"/>; }

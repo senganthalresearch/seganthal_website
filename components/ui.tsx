@@ -21,6 +21,7 @@ export function Chart({history, compact = false}: {history: Candle[]; compact?: 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, { ...options, signal: options.signal || AbortSignal.timeout(55000), headers: { ...(typeof options.body === "string" ? {"Content-Type": "application/json"} : {}), ...options.headers } });
   const body = await response.json().catch(() => ({}));
+  if (response.status === 402 && typeof window !== 'undefined' && window.location.pathname !== '/account') window.location.assign('/account');
   if (!response.ok) throw new Error(body.error || "Unable to complete this request. Please try again.");
   return body;
 }
