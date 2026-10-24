@@ -9,7 +9,7 @@ export const GET = api(async request => {
  await requireMember(true);
  const params = new URL(request.url).searchParams, database = await db(), collection = database.collection('members');
  const mode = paymentMode() || 'live', until = `billing_${mode}_until`, now = Math.floor(Date.now()/1000);
- const projection = { _id:0,email:1,name:1,role:1,active:1,permissions:1,contactPhone:1,joinedAt:1,emailVerifiedAt:1,onboardedAt:1,reviewerAccessUntil:1,complimentaryAccessUntil:1,complimentaryReason:1,[until]:1 };
+ const projection = { _id:0,email:1,name:1,role:1,active:1,permissions:1,contactPhone:1,joinedAt:1,emailVerifiedAt:1,onboardedAt:1,reviewerAccessUntil:1,complimentaryAccessUntil:1,complimentaryReason:1,manualPaidUntil:1,[until]:1 };
  const email = params.get('email');
  if (email) {
    const normalized = z.email().parse(email).toLowerCase();
@@ -27,11 +27,11 @@ export const GET = api(async request => {
  const filters: Filter<Document>[] = [base];
  if(query){const escaped=query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');filters.push({$or:['name','email','contactPhone'].map(key=>({[key]:{$regex:escaped,$options:'i'}}))});}
  if(role!=='all')filters.push({role:role==='standard'?{$in:['standard','member']}:role});
- const paid: Filter<Document> = {active:true,role:{$ne:'admin'},[until]:{$gt:now}};
+ const paid: Filter<Document> = {active:true,role:{$ne:'admin'},$or:[{[until]:{$gt:now}},{manualPaidUntil:{$gt:now}}]};
  const reviewer: Filter<Document> = {active:true,role:{$ne:'admin'},emailVerifiedAt:{$exists:true},onboardedAt:{$exists:true},reviewerAccessUntil:{$gt:now}};
  const complimentary: Filter<Document> = {active:true,role:{$ne:'admin'},complimentaryAccessUntil:{$gt:now}};
- const unpaid: Filter<Document> = {active:true,role:{$ne:'admin'},$and:[{$or:[{[until]:{$exists:false}},{[until]:{$lte:now}}]},{$or:[{reviewerAccessUntil:{$exists:false}},{reviewerAccessUntil:{$lte:now}}]},{$or:[{complimentaryAccessUntil:{$exists:false}},{complimentaryAccessUntil:{$lte:now}}]}]};
- const expiring: Filter<Document> = {...paid,[until]:{$gt:now,$lte:now+30*86400}};
+ const unpaid: Filter<Document> = {active:true,role:{$ne:'admin'},$and:[{$or:[{manualPaidUntil:{$exists:false}},{manualPaidUntil:{$lte:now}}]},{$or:[{[until]:{$exists:false}},{[until]:{$lte:now}}]},{$or:[{reviewerAccessUntil:{$exists:false}},{reviewerAccessUntil:{$lte:now}}]},{$or:[{complimentaryAccessUntil:{$exists:false}},{complimentaryAccessUntil:{$lte:now}}]}]};
+ const expiring: Filter<Document> = {$and:[paid,{$or:[{[until]:{$exists:false}},{[until]:{$lte:now+30*86400}}]},{$or:[{manualPaidUntil:{$exists:false}},{manualPaidUntil:{$lte:now+30*86400}}]}]};
  if(status!=='all')filters.push(status==='paid'?paid:status==='unpaid'?unpaid:status==='expiring'?expiring:status==='reviewer'?reviewer:status==='complimentary'?complimentary:{active:false});
  const filter: Filter<Document> = {$and:filters};
  const [total,all,paidCount,unpaidCount,expiringCount,suspended] = await Promise.all([collection.countDocuments(filter),collection.countDocuments(base),collection.countDocuments({$and:[base,paid]}),collection.countDocuments({$and:[base,unpaid]}),collection.countDocuments({$and:[base,expiring]}),collection.countDocuments({...base,active:false})]);

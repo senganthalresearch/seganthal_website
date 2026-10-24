@@ -9,6 +9,7 @@ import {csvCell} from '@/lib/analytics';
 import {parseCsv} from '@/lib/data-utils';
 import {request,Notice,Empty} from './ui';
 import {AboutDialog,Banner} from './community';
+import { ManualPaymentAdmin } from './manual-payment-admin';
 import { AdminUsers } from './admin-users';
 type Props={preview:boolean;member:Member;settings:SiteSettings;onSettings:(settings:SiteSettings)=>void;onError:(message:string)=>void};
 function download(name:string,rows:unknown[][]){const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
@@ -40,7 +41,7 @@ function AnalyticsCenter({preview,accounts,onError}:{preview:boolean;accounts:Me
  return <section className="panel admin-section analytics-center"><div className="section-title"><div><h2>Analytics center</h2><span>Today is counted from 12:00 AM IST</span></div><button className="section-refresh" disabled={busy} aria-label="Refresh analytics" onClick={()=>void load()}><RefreshCw size={16} className={busy?'spin':''}/></button></div><div className="admin-stats analytics-stats">{cards.map(([label,value,Icon,detail])=><div key={label}><Icon size={18}/><strong>{value}</strong><span>{label}</span><small>{detail}</small></div>)}</div><div className="analytics-recent"><div><strong>Recent visitors</strong><span className="small muted">Updated {updated} IST</span></div>{data.recent.length?<ul>{data.recent.map(item=><li key={item.email}><span><strong>{item.name}</strong><small>{item.email}</small></span><em>{item.page||'Workspace'} · {new Date(item.lastSeenAt).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'})}</em></li>)}</ul>:<p className="muted">No visits recorded yet today.</p>}</div></section>;
 }
 export function Administration(props:Props){
- return <><AdminUsers preview={props.preview} member={props.member} onError={props.onError}/><details className="admin-secondary"><summary>Usage analytics</summary><AnalyticsCenter preview={props.preview} accounts={[]} onError={props.onError}/></details><details className="admin-secondary"><summary>Website content</summary><ContentEditor {...props}/></details><details className="admin-secondary"><summary>System health and logs</summary><AdminTools preview={props.preview} onError={props.onError}/></details></>;
+ return <><ManualPaymentAdmin preview={props.preview}/><AdminUsers preview={props.preview} member={props.member} onError={props.onError}/><details className="admin-secondary"><summary>Usage analytics</summary><AnalyticsCenter preview={props.preview} accounts={[]} onError={props.onError}/></details><details className="admin-secondary"><summary>Website content</summary><ContentEditor {...props}/></details><details className="admin-secondary"><summary>System health and logs</summary><AdminTools preview={props.preview} onError={props.onError}/></details></>;
 }
 type CheckResult={name:string;status:string;detail:string;duration:number};
 function AdminTools({preview,onError}:{preview:boolean;onError:(message:string)=>void}){

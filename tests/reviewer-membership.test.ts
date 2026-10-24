@@ -14,7 +14,7 @@ test('reviewer expiry never grants access to suspended, admin, incomplete or ord
 });
 
 test('existing reviewer password is retained; demo API isolation ends with revocation or expiry', async () => {
-  const dbModule=require('../lib/db'),originalDb=dbModule.db;
+  const dbModule=require('../lib/db'),originalDb=dbModule.db,originalMongo=dbModule.mongoDb;
   const auth=require('../lib/auth'),originalCurrent=auth.currentMember;
   const env={...process.env};
   const password='Fixture-existing-password-8391!';
@@ -26,8 +26,10 @@ test('existing reviewer password is retained; demo API isolation ends with revoc
       if(name==='emailCredentials'){credentialReads++;return q.email===row.email?{email:row.email,passwordHash:hash}:null;}
       return name==='members'&&q.email===row.email&&(q.active===undefined||q.active===row.active)?structuredClone(row):null;
     },
+    find:()=>({toArray:async()=>[]}),
     findOneAndUpdate:async()=>({count:1})
   })});
+  dbModule.mongoDb=dbModule.db;
   Object.assign(process.env,{ADMIN_EMAILS:'owner@example.test',REVIEWER_LOGIN_EMAIL:'',RAZORPAY_MODE:'disabled'});
   try {
     const provider=auth.authOptions.providers.find((p:any)=>p.options?.id==='email-password');
@@ -50,7 +52,7 @@ test('existing reviewer password is retained; demo API isolation ends with revoc
     row={...row,active:false,reviewerAccessUntil:Math.floor(Date.now()/1000)+3600};
     assert.equal(await auth.memberFor(row.email),null);
   } finally {
-    dbModule.db=originalDb;auth.currentMember=originalCurrent;
+    dbModule.db=originalDb;dbModule.mongoDb=originalMongo;auth.currentMember=originalCurrent;
     for(const key of Object.keys(process.env))if(!(key in env))delete process.env[key];
     Object.assign(process.env,env);
   }

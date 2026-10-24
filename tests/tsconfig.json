@@ -9,6 +9,6 @@
     "rootDir": "..",
     "plugins": []
   },
-  "include": ["./*.test.ts", "../lib/analytics.ts", "../lib/access.ts", "../lib/auth.ts", "../lib/validation.ts", "../lib/types.ts"],
+  "include": ["../app/api/manual-payments/route.ts","./*.test.ts", "../lib/analytics.ts", "../lib/access.ts", "../lib/auth.ts", "../lib/validation.ts", "../lib/types.ts"],
   "exclude": ["../node_modules"]
 }

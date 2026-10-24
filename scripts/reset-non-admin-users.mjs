@@ -31,7 +31,7 @@ try {
       reports:ownerFilter,stakeScans:ownerFilter,transactions:ownerFilter,ledgers:ownerFilter
     };
     // A reset must never orphan a paid or renewable provider subscription.
-    for(const collection of ['billingAccounts','subscriptions','paymentEvents','billingArchive']) {
+    for(const collection of ['billingAccounts','subscriptions','paymentEvents','billingArchive','manualPayments']) {
       if(await database.collection(collection).countDocuments({},options))throw Error('Payment records exist. Stop and review subscriptions before resetting accounts.');
     }
     const records={};

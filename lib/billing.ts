@@ -1,3 +1,4 @@
+import { manualPaidUntil } from './manual-payments';
 import { randomUUID } from 'node:crypto';
 import { db } from './db';
 import { accessUntil, paidPeriod, paymentMode, YEARLY_PRICE, type BillingMode, type Invoice, type Payment, type PaidPeriod } from './billing-rules';
@@ -38,14 +39,14 @@ export async function billingRecord(email: string) {
 }
 export async function hasPaidAccess(member: Member) {
   if (!member.active || member.reviewDemo) return false;
-  if (member.role === 'admin' || hasComplimentaryAccess(member)) return true;
+  if (member.role === 'admin' || hasComplimentaryAccess(member) || await manualPaidUntil(member)) return true;
   const record = await billingRecord(member.email);
   return Boolean(record && accessUntil(record.periods) > 0);
 }
 
 // A database lease serialises refreshes/cancellation across instances. Always
 // fetch current provider state, so replayed/out-of-order events cannot add years.
-async function locked<T>(key: string, action: () => Promise<T>): Promise<T> {
+export async function locked<T>(key: string, action: () => Promise<T>): Promise<T> {
   const collection = (await db()).collection<{ _id: string; token: string; until: number }>('billingLocks');
   const token = randomUUID(), now = Date.now();
   try { await collection.updateOne({ _id: key }, { $setOnInsert: { token: '', until: 0 } }, { upsert: true }); }
@@ -102,7 +103,8 @@ export async function refreshBilling(email: string) {
 
 export async function createCheckout(member: Member) {
   const c = config();
-  if (member.role === 'admin' || hasComplimentaryAccess(member)) throw new BillingError(400, 'Your access is already included. Open your workspace.');
+  if (member.accountId && await (await db()).collection('manualPayments').findOne({accountId:member.accountId,status:'pending'})) throw new BillingError(409, 'Your UPI submission is awaiting review. Contact support before making another payment.');
+  if (member.role === 'admin' || hasComplimentaryAccess(member) || await manualPaidUntil(member)) throw new BillingError(400, 'Your access is already included. Open your workspace.');
   const plan = await razorpay<{ id: string; period: string; interval: number; item: { amount: number; currency: string } }>(`plans/${c.planId}`);
   if (plan.id !== c.planId || plan.period !== 'yearly' || plan.interval !== 1 || plan.item.amount !== YEARLY_PRICE || plan.item.currency !== 'INR')
     throw new BillingError(503, 'The annual payment plan is not configured correctly. Contact support.');
@@ -151,10 +153,11 @@ export async function cancelRenewal(email: string) {
 }
 
 export async function billingSummary(member: Member) {
+  const manualUntil = await manualPaidUntil(member);
   const record = await billingRecord(member.email);
-  return { mode: paymentMode(), checkoutReady: Boolean(billingConfig()), admin: member.role === 'admin', email: member.email,
+  return { manualUntil, mode: paymentMode(), checkoutReady: Boolean(billingConfig()), admin: member.role === 'admin', email: member.email,
     complimentaryUntil: hasComplimentaryAccess(member) ? member.complimentaryAccessUntil! : 0,
-    active: member.active && (member.role === 'admin' || hasComplimentaryAccess(member) || Boolean(record && accessUntil(record.periods))), paidUntil: record ? accessUntil(record.periods) : 0,
+    active: member.active && (member.role === 'admin' || hasComplimentaryAccess(member) || manualUntil > 0 || Boolean(record && accessUntil(record.periods))), paidUntil: record ? accessUntil(record.periods) : 0,
     status: record?.status || 'unpaid', cancelRequested: record?.cancelRequested || false,
     subscriptionId: record?.subscriptionId || null, payments: record?.periods || [] };
 }

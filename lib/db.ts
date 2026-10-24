@@ -26,6 +26,10 @@ const localFallbackEnabled = process.env.MONGODB_LOCAL_FALLBACK === "true" || (p
 
 async function ensureIndexes(database: Db) {
   await Promise.all([
+    database.collection('manualPayments').createIndex({utr:1},{unique:true}),
+    database.collection('manualPayments').createIndex({accountId:1},{unique:true,partialFilterExpression:{status:'pending'}}),
+    database.collection('manualPayments').createIndex({email:1,accountId:1,status:1,end:1}),
+    database.collection('manualPayments').createIndex({status:1,createdAt:-1}),
     database.collection("preferences").createIndex({owner:1,key:1},{unique:true}),
     database.collection("visits").createIndex({owner:1,symbol:1},{unique:true}),
     database.collection("transactions").createIndex({owner:1,id:1},{unique:true}),
@@ -311,7 +315,7 @@ function localDb() {
   return global.senganthalLocalDb;
 }
 
-async function mongoDb() {
+export async function mongoDb() {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("Database is not configured. Contact your administrator.");
   if (!global.senganthalMongo) {
