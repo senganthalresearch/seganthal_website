@@ -53,6 +53,8 @@ export const POST = api(async request => {
     if (!credential) throw new HttpError(400, "The code is invalid or expired.");
     await verifyEmailOtp("reset", address, body.code);
     const passwordHash = await hashPassword(body.password);
+    // Invalidate existing sessions before replacing credentials; a failed write stays closed.
+    await database.collection("members").updateOne({ email: address }, { $set: { sessionsValidAfter: Date.now() } });
     await database.collection("emailCredentials").updateOne({ email: address }, { $set: { passwordHash, updatedAt: new Date().toISOString() } });
     await database.collection("audit").insertOne({ action: "email.password.reset", target: address, createdAt: new Date() });
     return { ok: true };

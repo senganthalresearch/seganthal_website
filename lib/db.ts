@@ -22,7 +22,9 @@ type Update<T extends StoredDocument> = {
 type Projection = Record<string, 0 | 1>;
 
 const localDbPath = path.join(process.cwd(), ".data", "local-db.json");
-const localFallbackEnabled = process.env.MONGODB_LOCAL_FALLBACK === "true" || (process.env.MONGODB_LOCAL_FALLBACK !== "false" && process.env.NODE_ENV !== "production");
+// Never replace authoritative accounts, payment locks or permissions with a
+// local development snapshot on a production server, even if a flag is copied.
+const localFallbackEnabled = process.env.NODE_ENV !== "production" && process.env.MONGODB_LOCAL_FALLBACK !== "false";
 
 async function ensureIndexes(database: Db) {
   await Promise.all([

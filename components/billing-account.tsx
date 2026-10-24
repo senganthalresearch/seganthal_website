@@ -17,11 +17,11 @@ export function BillingAccount() {
   const [data, setData] = useState<Summary | null>(null), [busy, setBusy] = useState(false), [consent, setConsent] = useState(false);
   const [message, setMessage] = useState(''), [error, setError] = useState(''), [scriptReady, setScriptReady] = useState(false);
   useEffect(() => { let alive = true; request<Summary>('/api/billing').then(result => { if (alive) setData(result); }).catch(e => { if (alive) setError(e.message); }); return () => { alive = false; }; }, []);
-  async function action(action: 'refresh' | 'cancel' | 'verify', extra: Record<string, unknown> = {}) {
+  async function action(action: 'refresh' | 'cancel' | 'verify' | 'switchToUpi', extra: Record<string, unknown> = {}) {
     setBusy(true); setError(''); setMessage('');
     try {
       const result = await request<Summary>('/api/billing', { method: 'POST', body: JSON.stringify({ action, ...extra }) });
-      setData(result); setMessage(action === 'cancel' ? 'Renewal cancelled. Any remaining paid access is shown below.' : result.active ? 'Payment verified. Your workspace is ready.' : 'No active paid period confirmed yet. If charged, check again shortly before attempting another payment.');
+      setData(result); setMessage(action === 'switchToUpi' ? (result.active ? 'Your card payment is already verified. Open your workspace; no additional UPI payment is needed.' : 'The unused card checkout is closed. You can now use the UPI payment option below when available.') : action === 'cancel' ? 'Renewal cancelled. Any remaining paid access is shown below.' : result.active ? 'Payment verified. Your workspace is ready.' : 'No active paid period confirmed yet. If charged, check again shortly before attempting another payment.');
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   async function pay() {
@@ -48,16 +48,16 @@ export function BillingAccount() {
         {data.cancelRequested && <p>Renewal cancellation requested. Your paid access remains available until its expiry.</p>}
         {!data.admin && <p className="small muted">Membership: {data.manualUntil > 0 ? 'Paid via UPI — manually verified' : data.status}{data.subscriptionId ? ` · ${data.subscriptionId}` : ''}</p>}
       </div><div className="membership-price"><strong>₹599 <small>/ year</small></strong>{data.active && <a className="button primary" href="/workspace">Open workspace</a>}</div></div>
-      {!data.active && <section><h3>One membership. A year of research.</h3><p>Financial data, charts, screening, watchlists and portfolio tools. Classes are not included.</p>
+      <ManualUpiPayment switchBusy={busy} onSwitchToUpi={()=>{if(window.confirm('Close your unused card checkout and switch to a one-time UPI payment? Do not continue if your bank shows a card debit or a payment is still processing.'))void action('switchToUpi');}} onPendingChange={setManualPending} active={Boolean(data.active)} admin={data.admin} email={data.email} subscriptionOpen={Boolean(data.status === 'creating' || data.subscriptionId && !['cancelled','completed','expired'].includes(data.status))}/>
+      {!data.active && <section><h3>Pay by card · annual renewal</h3><p>Financial data, charts, screening, watchlists and portfolio tools. Classes are not included.</p>
         {!data.checkoutReady ? <div className="notice">Checkout is not open yet. Contact support for availability.</div> : <>
           <label className="billing-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
             <span>I agree to the <a href="/terms-and-conditions">Terms</a> and <a href="/refund-policy">Refund policy</a>, and authorize ₹599 now and yearly renewal at ₹599 until cancelled, for up to 10 annual payments. I can stop renewal from this page.</span></label>
-          <button className="button primary" disabled={busy || manualPending || !consent || !scriptReady} onClick={() => void pay()}>{busy ? 'Please wait…' : data.mode === 'test' ? 'Try test checkout · ₹599/year' : 'Subscribe · ₹599/year'}</button>
+          <button className="button primary" disabled={busy || manualPending || !consent || !scriptReady} onClick={() => void pay()}>{busy ? 'Please wait…' : data.mode === 'test' ? 'Try test checkout · ₹599/year' : 'Pay by card · ₹599/year'}</button>
         </>}
       </section>}
       {!data.admin && <div className="public-actions"><button className="button secondary" disabled={busy || !data.checkoutReady} onClick={() => void action('refresh')}>Check payment status</button>
         {data.subscriptionId && !data.cancelRequested && !['cancelled', 'completed', 'expired'].includes(data.status) && <button className="button secondary" disabled={busy} onClick={() => { if (window.confirm('Stop future annual renewals? Access remains until the paid period ends.')) void action('cancel'); }}>Cancel renewal</button>}</div>}
-      <ManualUpiPayment onPendingChange={setManualPending} active={Boolean(data.active)} admin={data.admin} email={data.email} subscriptionOpen={Boolean(data.subscriptionId && !['cancelled','completed','expired'].includes(data.status))}/>
       <section><h3>Card payment history</h3>{data.payments.length ? <div className="table-wrap"><table><thead><tr><th>Payment</th><th>Amount</th><th>Access period</th><th>Status</th></tr></thead><tbody>{data.payments.map(p => <tr key={p.paymentId}><td>{p.paymentId}</td><td>₹{p.amount / 100}</td><td>{date(p.start)} – {date(p.end)}</td><td>{p.refunded ? 'Refunded' : 'Paid'}</td></tr>)}</tbody></table></div> : <p className="muted">No verified annual payments yet.</p>}</section>
       <p className="small">Full refund requests within 7 days of your first purchase: <a href="mailto:senganthalreserch@gmail.com">contact support</a>. Include your payment reference. <a href="/refund-policy">Refund details</a></p>
     </>}

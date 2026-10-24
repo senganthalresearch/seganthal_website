@@ -70,3 +70,22 @@ html[data-theme=dark] .edge-welcome{background:var(--surface)}html[data-theme=da
 .research-price-chart .chart-readout{min-height:58px;gap:2px}.research-price-chart .chart-readout strong{font-size:16px;font-weight:600}.research-price-chart .chart-readout small{font-size:11px;font-weight:400}.research-price-chart .chart-range{font-size:10px}.research-price-chart svg{width:100%;height:auto;min-height:170px;touch-action:pan-y}
 @media(max-width:760px){.welcome-announcement{padding:18px 18px 0}.home-announcement{grid-template-columns:1fr;padding:17px;gap:12px}.home-announcement-image{max-width:100%;height:320px}.research-shell .news-grid{grid-template-columns:1fr}.news-story-media{height:170px}.research-price-chart .chart-readout strong{font-size:14px}.research-shell .dashboard-scroll{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.research-shell .dashboard-scroll span{animation:none;padding:8px 12px;white-space:normal;width:auto}.news-story,.news-story-media img,.home-announcement-image{transition:none}}
+
+/* Touch navigation and readable Tamil text. Keep category controls above the drawer shade. */
+[lang=ta]{font-family:"Noto Sans Tamil",Arial,sans-serif;letter-spacing:normal;line-height:1.8;font-weight:500}
+.welcome-brand small[lang=ta]{font-size:10px;line-height:1.8;white-space:normal}
+.global-research-search>button,.welcome-search>button{min-width:44px;min-height:40px}
+@media(max-width:760px){
+.research-header{height:auto;min-height:111px}.research-header-actions{flex-wrap:wrap;gap:4px}.research-header-actions>.icon-button,.research-header-actions>.text-button{min-height:44px;min-width:36px}
+.research-header .theme-control{display:none}.global-research-search input,.welcome-search input{font-size:16px!important}
+.research-mobile-shade{left:52px}.research-sidebar{max-width:calc(100vw - 60px)}.research-nav-items{overscroll-behavior:contain}
+.research-rail{position:relative;z-index:65}.research-rail button{touch-action:manipulation;min-height:48px}
+.research-shell .line-tabs,.research-shell .analyser-tabs,.trending-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;max-width:100%;touch-action:pan-x;scrollbar-width:thin}
+.research-shell .line-tabs button,.research-shell .analyser-tabs button,.trending-tabs button{flex-shrink:0;min-height:44px;font-size:12px}
+.research-page-body .admin-section{padding:12px;overflow-wrap:anywhere}.admin-section .section-title,.directory-pagination{flex-wrap:wrap}.member-dialog{max-width:calc(100vw - 24px);max-height:85dvh;overflow:auto}
+.welcome-brand small[lang=ta]{font-size:9px}.welcome-banner>span:first-child{display:block}.welcome-banner{flex-wrap:wrap;gap:4px}.welcome-nav>.welcome-login-link{display:inline-flex}.welcome-mega-menu{max-height:70dvh;overflow:auto}
+}
+
+@media(max-width:420px){.research-header .research-brand>span{display:none}}
+
+@media(max-width:760px){.research-sidebar{transform:none;transition:none}.research-sidebar.open{transform:none}}

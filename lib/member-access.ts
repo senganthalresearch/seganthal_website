@@ -12,3 +12,7 @@ export function sessionMatchesAccount(member: Member, accountId: unknown) {
   return member.active && (member.role === 'admin' ||
     (typeof accountId === 'string' && Boolean(accountId) && accountId === member.accountId));
 }
+
+export function sessionSurvivesReset(member: Member, startedAt: unknown) {
+  return !member.sessionsValidAfter || (typeof startedAt==='number' && Number.isFinite(startedAt) && startedAt>member.sessionsValidAfter);
+}

@@ -4,6 +4,7 @@ export type ManualPayment = {
   amount: number; consentAt?: string; termsVersion?: string; paidAt: string; createdAt: string; status: 'pending'|'approved'|'rejected'|'revoked';
   screenshot: string; reviewedBy?: string; reviewedAt?: string; note?: string;
   start?: number; end?: number; notification?: 'sent'|'failed';
+  source?: 'admin-record'; history?: {action:string;actor:string;note:string;at:string}[];
 };
 export function normalizeUtr(value: string) { return value.trim().toUpperCase(); }
 export function manualAccessEnd(rows: Pick<ManualPayment, 'status'|'accountId'|'amount'|'end'>[], accountId: string, now = Math.floor(Date.now()/1000)) {

@@ -7,17 +7,17 @@ import { verifyPassword } from "./passwords";
 import type { Member } from "./types";
 import { reviewerConfig, reviewerPasswordMatches, validReviewerSession } from "./reviewer-access";
 
-import { sessionMatchesAccount } from "./member-access";
+import { sessionMatchesAccount, sessionSurvivesReset } from "./member-access";
 import { hasReviewerAccess } from "./reviewer-membership";
 
-type ReviewIdentity = { accountId?: string; reviewDemo?: boolean; reviewFingerprint?: string };
+type ReviewIdentity = { sessionStartedAt?: number; accountId?: string; reviewDemo?: boolean; reviewFingerprint?: string };
 
 export const configured = () => ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET", "NEXTAUTH_URL", "MONGODB_URI", "ADMIN_EMAILS"].every(key => Boolean(process.env[key]));
 export async function memberFor(email: string): Promise<Member | null> {
   const normalized = normalizeEmail(email);
   if (owners().includes(normalized)) return { email: normalized, role: "admin", active: true };
   const member = await (await db()).collection<Member>("members").findOne({ email: normalized, active: true });
-  return member ? { accountId: String(member._id), complimentaryAccessUntil: member.complimentaryAccessUntil, complimentaryReason: member.complimentaryReason, reviewerAccessUntil: member.reviewerAccessUntil, reviewDemo: hasReviewerAccess(member), email: member.email, name: member.name, username: member.username, contactPhone: member.contactPhone, authProvider: member.authProvider, emailVerifiedAt: member.emailVerifiedAt, onboardedAt: member.onboardedAt, role: member.role, active: member.active, permissions: member.permissions } : null;
+  return member ? { accountId: String(member._id), sessionsValidAfter: member.sessionsValidAfter, complimentaryAccessUntil: member.complimentaryAccessUntil, complimentaryReason: member.complimentaryReason, reviewerAccessUntil: member.reviewerAccessUntil, reviewDemo: hasReviewerAccess(member), email: member.email, name: member.name, username: member.username, contactPhone: member.contactPhone, authProvider: member.authProvider, emailVerifiedAt: member.emailVerifiedAt, onboardedAt: member.onboardedAt, role: member.role, active: member.active, permissions: member.permissions } : null;
 }
 export const authOptions: NextAuthOptions = {
   providers: [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID || "not-configured", clientSecret: process.env.GOOGLE_CLIENT_SECRET || "not-configured", authorization: { params: { scope: "openid email profile", prompt: "select_account" } } }), CredentialsProvider({ id: "email-password", name: "Email and password", credentials: { email: { label: "Email", type: "email" }, password: { label: "Password", type: "password" } }, async authorize(credentials) {
@@ -37,9 +37,10 @@ export const authOptions: NextAuthOptions = {
     }
     const member = await database.collection<Member>("members").findOne({ email, active: true });
     if (!member?.emailVerifiedAt || !member.onboardedAt) return null;
+    const sessionStartedAt = Date.now();
     const credential = await database.collection<{email:string;passwordHash:string}>("emailCredentials").findOne({ email });
     if (!credential || !await verifyPassword(password, credential.passwordHash)) return null;
-    return { id: member.email, email: member.email, name: member.name || email };
+    return { id: member.email, email: member.email, name: member.name || email, sessionStartedAt };
   } })],
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
@@ -81,6 +82,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         const identity = user as typeof user & ReviewIdentity;
+        token.sessionStartedAt = identity.sessionStartedAt ?? Date.now();
         token.accountId = !identity.reviewDemo && user.email ? (await memberFor(user.email))?.accountId : undefined;
         token.reviewDemo = identity.reviewDemo === true;
         token.reviewFingerprint = identity.reviewDemo ? identity.reviewFingerprint : undefined;
@@ -90,6 +92,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user?.email) session.user.email = normalizeEmail(session.user.email);
       const identity = session as typeof session & ReviewIdentity;
+      identity.sessionStartedAt = typeof token.sessionStartedAt === "number" ? token.sessionStartedAt : undefined;
       identity.accountId = typeof token.accountId === "string" ? token.accountId : undefined;
       identity.reviewDemo = token.reviewDemo === true;
       identity.reviewFingerprint = typeof token.reviewFingerprint === "string" ? token.reviewFingerprint : undefined;
@@ -107,5 +110,6 @@ export async function currentMember() {
     return { email: session.user.email, name: "Reviewer demo", role: "standard", active: true, reviewDemo: true } satisfies Member;
   }
   const member = await memberFor(session.user.email);
+  if (member && !sessionSurvivesReset(member,identity.sessionStartedAt)) return null;
   return member && sessionMatchesAccount(member, identity.accountId) ? { ...member, name: session.user.name || member.name || member.email.split("@")[0] } : null;
 }

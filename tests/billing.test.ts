@@ -88,6 +88,25 @@ test('checkout, replay, renewal, cancellation, refund and access checks',async()
     providerInvoices=[{...invoice,billing_start:now-100,billing_end:now+365*86400-100}];await billing.refreshBilling(member.email);assert.equal(await billing.hasPaidAccess(member),true,'A renewed paid period restores access');
     process.env.RAZORPAY_MODE='live';process.env.RAZORPAY_KEY_ID='rzp_live_fixture';assert.equal(await billing.hasPaidAccess(member),false,'Test records cannot unlock live access');
     process.env.RAZORPAY_MODE='test';process.env.RAZORPAY_KEY_ID='rzp_test_fixture';
+    // Switching must reconcile provider state and confirm closure, not merely
+    // delete a local subscription ID or trust the caller's unpaid claim.
+    const switchEmail='switch@example.test';
+    const seedSwitch=()=>{const rows=stores.get('billingAccounts')!;const old=rows.findIndex(r=>r.email===switchEmail);if(old>=0)rows.splice(old,1);rows.push({_id:'test:'+switchEmail,mode:'test',email:switchEmail,subscriptionId:'sub_test1',status:'created',periods:[],paidUntil:0,attempt:'switch-fixture',createdAt:Date.now()});};
+    providerInvoices=[];providerStatus='created';seedSwitch();
+    let before=cancels;
+    assert.equal((await billing.switchToManualUpi(switchEmail))?.status,'cancelled');
+    assert.equal(cancels,before+1);
+    assert.equal((await billing.billingRecord(switchEmail))?.status,'cancelled');
+    await billing.switchToManualUpi(switchEmail);assert.equal(cancels,before+1,'Repeated switching does not cancel again');
+    providerStatus='authenticated';seedSwitch();before=cancels;
+    await assert.rejects(billing.switchToManualUpi(switchEmail),/already in progress/);assert.equal(cancels,before);
+    providerStatus='active';providerInvoices=[invoice];seedSwitch();
+    assert.equal((await billing.switchToManualUpi(switchEmail))?.paidUntil,invoice.billing_end);assert.equal(cancels,before,'A just-paid subscription is preserved');
+    providerInvoices=[];providerStatus='expired';seedSwitch();
+    assert.equal((await billing.switchToManualUpi(switchEmail))?.status,'expired');assert.equal(cancels,before,'Stale local created status is refreshed without cancellation');
+    const workingFetch=global.fetch;global.fetch=(async()=>{throw new Error('Provider unavailable');}) as typeof fetch;
+    seedSwitch();await assert.rejects(billing.switchToManualUpi(switchEmail),/could not be reached/);
+    assert.equal((await billing.billingRecord(switchEmail))?.status,'created','An outage never unblocks another payment');global.fetch=workingFetch;
     const auth=require('../lib/auth'),originalMember=auth.currentMember;
     try{
       auth.currentMember=async()=>({...member,email:'unpaid@example.test'});

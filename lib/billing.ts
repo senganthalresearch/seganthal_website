@@ -102,6 +102,10 @@ export async function refreshBilling(email: string) {
 }
 
 export async function createCheckout(member: Member) {
+  // Share the member lease with UPI submissions and admin payment records.
+  return locked(`manual:${member.accountId || member.email}`,()=>createCardCheckout(member));
+}
+async function createCardCheckout(member: Member) {
   const c = config();
   if (member.accountId && await (await db()).collection('manualPayments').findOne({accountId:member.accountId,status:'pending'})) throw new BillingError(409, 'Your UPI submission is awaiting review. Contact support before making another payment.');
   if (member.role === 'admin' || hasComplimentaryAccess(member) || await manualPaidUntil(member)) throw new BillingError(400, 'Your access is already included. Open your workspace.');
@@ -149,6 +153,27 @@ export async function cancelRenewal(email: string) {
     }
     await (await db()).collection('audit').insertOne({ action: 'subscription.cancel', actor: email, target: record.subscriptionId, createdAt: new Date() });
     return reconcile({ ...current, cancelRequested: true });
+  });
+}
+
+// Explicit user action: confirm provider state before closing an abandoned
+// checkout. Never treat a local status or a failed API call as cancellation.
+export async function switchToManualUpi(email: string) {
+  const mode = config().mode;
+  return locked(`${mode}:${email}`, async () => {
+    const record = await billingRecord(email);
+    if (!record) return null;
+    if (!record.subscriptionId) throw new BillingError(409, 'An earlier card checkout is still being reconciled. Contact support before paying again.');
+    const current = await reconcile(record);
+    if (accessUntil(current.periods) || ['cancelled', 'completed', 'expired'].includes(current.status)) return current;
+    if (current.status !== 'created') throw new BillingError(409, 'Your card mandate or payment is already in progress. Check payment status or contact support before paying by UPI.');
+    await razorpay(`subscriptions/${record.subscriptionId}/cancel`, { cancel_at_cycle_end: 0 });
+    const closed = await reconcile(current);
+    if (!['cancelled', 'completed', 'expired'].includes(closed.status))
+      throw new BillingError(409, 'Razorpay has not yet confirmed closure. Check payment status before paying by UPI.');
+    await (await db()).collection<BillingRecord>('billingAccounts').updateOne({ _id: record._id, subscriptionId: record.subscriptionId }, { $set: { cancelRequested: true } });
+    await (await db()).collection('audit').insertOne({ action: 'subscription.switch-to-manual-upi', actor: email, target: record.subscriptionId, createdAt: new Date() });
+    return { ...closed, cancelRequested: true };
   });
 }
 

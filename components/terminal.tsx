@@ -154,8 +154,8 @@ export default function Terminal({ member, preview = false }: { member: Member; 
     setError("");
     try {
       const path = "/api/news?q=" + encodeURIComponent(q) + "&source=" + source + (mode === "orders" ? "&mode=orders" : "");
-      const result = await request<{ items: NewsItem[] }>(path, mode === "orders" ? { cache: "no-store" } : {});
-      if (requestId === newsRequestId.current) setNews(result.items);
+      const result = await request<{ items: NewsItem[]; warning?: string }>(path, mode === "orders" ? { cache: "no-store" } : {});
+      if (requestId === newsRequestId.current) {setNews(result.items);if(result.warning)setError(result.warning);}
     } catch (e) {
       if (requestId === newsRequestId.current) {
         setNews([]);

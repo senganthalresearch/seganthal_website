@@ -53,4 +53,16 @@ test('manual payment route protects proof, rejects duplicate credits and makes r
   assert.equal((await post({...review,action:'revoke',note:'Refund processed separately; reference recorded'})).status,200);assert.equal(rows[0].status,'revoked');
   assert.equal((await post(review)).status,409);
   identity=member;assert.equal((await post(submit)).status,409);
+  const record={action:'record',email:member.email,utr:'987654321012',amount:59900,end:Math.floor(Date.now()/1000)+86400,note:'Bank credit checked on statement',verified:true};
+  assert.equal((await post(record)).status,403);
+  identity={email:'admin@example.com',role:'admin',active:true};
+  assert.equal((await post({...record,verified:false})).status,400);
+  assert.equal((await post({...record,amount:1})).status,400);
+  assert.equal((await post({...record,end:Math.floor(Date.now()/1000)-1})).status,400);
+  assert.equal((await post({...record,end:Math.floor(Date.now()/1000)+800*86400})).status,400);
+  active=true;assert.equal((await post(record)).status,409);active=false;
+  assert.equal((await post(record)).status,200);
+  assert.equal(rows[1].status,'approved');assert.equal(rows[1].source,'admin-record');assert.equal(rows[1].history?.[0].actor,'admin@example.com');
+  assert.equal((await post(record)).status,409);
+
 });

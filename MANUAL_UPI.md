@@ -12,7 +12,7 @@ The QR flow starts **closed**. An administrator can enable it under **Business Q
 
 ## Member flow
 
-The signed-in account supplies the email automatically. The user pays ₹599, enters the payer name, 12-digit UPI reference (UTR/RRN), actual payment time and a JPG/PNG/WebP screenshot up to 2 MB. The screenshot is not automatically read or accepted as proof of receipt. Requests remain pending until reviewed. Only one pending request is permitted per account. An existing active membership or unresolved card subscription prevents a second purchase through this flow.
+The signed-in account supplies the email automatically. The user pays ₹599, enters the payer name, 12-digit UPI reference (UTR/RRN), actual payment time and a JPG/PNG/WebP screenshot up to 2 MB. The screenshot is not automatically read or accepted as proof of receipt. Requests remain pending until reviewed. Only one pending request is permitted per account. An existing active membership or unresolved card subscription prevents a second purchase through this flow. If an unpaid member previously opened card checkout, Account & billing offers **Close unused card checkout & switch to UPI**. This explicit action checks current Razorpay payments, cancels only a still-created checkout, then confirms closure with Razorpay. Authenticated/in-progress mandates stay blocked for support review. A payment discovered during the check grants its existing access rather than asking for another purchase.
 
 ## Admin review
 

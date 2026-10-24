@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hasComplimentaryAccess, sessionMatchesAccount } from '../lib/member-access';
+import { hasComplimentaryAccess, sessionMatchesAccount, sessionSurvivesReset } from '../lib/member-access';
 import type { Member } from '../lib/types';
 
 const member: Member = { email:'invited@example.test', accountId:'account-1', role:'standard', active:true, emailVerifiedAt:'yes', onboardedAt:'yes', complimentaryAccessUntil:2000 };
+
+test('password resets revoke old and legacy sessions but allow a fresh sign-in',()=>{
+  const reset={...member,sessionsValidAfter:2000};
+  for(const time of [undefined,1000,2000,NaN,Infinity])assert.equal(sessionSurvivesReset(reset,time),false);
+  assert.equal(sessionSurvivesReset(reset,2001),true);
+  assert.equal(sessionSurvivesReset(member,undefined),true);
+});
 
 test('complimentary access expires and never skips verification or suspension', () => {
   assert.equal(hasComplimentaryAccess(member,1999),true);
